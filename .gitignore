@@ -199,3 +199,6 @@ README.html
 *.iml
 .idea
 .exercism
+
+# Python quickdraw data
+python/quickdraw_data/
