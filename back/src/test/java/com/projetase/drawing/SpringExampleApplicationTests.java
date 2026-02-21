@@ -1,4 +1,4 @@
-package edu.polytech.springexample;
+package com.projetase.drawing;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

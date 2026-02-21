@@ -4,6 +4,7 @@ export default function Game() {
     const canvasRef = useRef(null);
     const [brushState, setBrushState] = useState('pen'); // 'pen' or 'eraser'
     const [brushSize, setBrushSize] = useState(5);
+    const [strokeCoords, setStrokeCoords] = useState([]);
 
     const onMouseDownCanvas = (event) => {
         const canvas = canvasRef.current;
@@ -15,6 +16,7 @@ export default function Game() {
         ctx.strokeStyle = brushState === 'pen' ? 'black' : 'white';
         ctx.beginPath();
         ctx.moveTo(x, y);
+        setStrokeCoords([{ x, y }]);
     }
 
     const handleMouseMoveCanvas = (event) => {
@@ -26,7 +28,25 @@ export default function Game() {
             const y = event.clientY - rect.top;
             ctx.lineTo(x, y);
             ctx.stroke();
+            setStrokeCoords(prevCoords => [...prevCoords, { x, y }]);
         }
+    }
+
+    const handleMouseUpCanvas = async (event) => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        ctx.closePath();
+        const response = await fetch("http://localhost:8080/process", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                points: strokeCoords
+            })
+        });
+        console.log(await response.text());
+        setStrokeCoords([]);
     }
 
     const onClickCanvas = (event) => {
@@ -62,7 +82,8 @@ export default function Game() {
                 style={{ border: "1px solid black", backgroundColor: "white" }} 
                 onClick={onClickCanvas}
                 onMouseDown={onMouseDownCanvas}
-                onMouseMove={handleMouseMoveCanvas}>
+                onMouseMove={handleMouseMoveCanvas}
+                onMouseUp={handleMouseUpCanvas}>
                 </canvas>
         
         </div>

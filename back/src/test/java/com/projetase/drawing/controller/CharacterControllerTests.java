@@ -1,9 +1,9 @@
-package edu.polytech.springexample.controller;
+package com.projetase.drawing.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import edu.polytech.springexample.model.FictionalCharacter;
-import edu.polytech.springexample.repository.CharacterRepo;
-import edu.polytech.springexample.service.CharacterService;
+import com.projetase.drawing.model.FictionalCharacter;
+import com.projetase.drawing.repository.CharacterRepo;
+import com.projetase.drawing.service.CharacterService;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
