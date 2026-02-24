@@ -9,16 +9,21 @@ class Data:
         self.max_len = 100
     
     def process_data(self, data):
+        
         max_len = 100
         mean_x = 2.73
         std_x = 27.59
         mean_y = 2.10
         std_y = 26.16
         
+        sample_freq = 5
+        
         # Add new stroke points to accumulated raw points
         points = data['points']
         for i in range(len(points)):
-            self.raw_points.append({'x': points[i]['x'], 'y': points[i]['y']})
+            if i % sample_freq == 0:
+                self.raw_points.append({'x': points[i]['x'], 'y': points[i]['y'], 'pen': 0.0})
+        self.raw_points[-1]['pen'] = 1.0
         
         # Step 1: Find min_x and min_y across all accumulated points
         if not self.raw_points:
@@ -56,13 +61,11 @@ class Data:
         # Step 5: Calculate deltas from normalized points + center and reduce the deltas
         self.data = []
         for i in range(len(normalized_points) - 1):
-            if i % 5 == 0 and len(self.data) < max_len:
+            if len(self.data) < max_len:
                 delta_x = (normalized_points[i+1]['x'] - normalized_points[i]['x'] - mean_x) / std_x
                 delta_y = (normalized_points[i+1]['y'] - normalized_points[i]['y'] - mean_y) / std_y
-                self.data.append([delta_x, delta_y, 0])
+                self.data.append([delta_x, delta_y, self.raw_points[i+1]['pen']])
         
-        if self.data:
-            self.data[-1][-1] = 1  # Mark the last point
         
         
     def get_data(self):

@@ -201,3 +201,8 @@ README.html
 .exercism
 
 python/quickdraw_data
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class

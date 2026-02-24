@@ -27,7 +27,7 @@ def predict():
         stroke_data = request.json
         data.process_data(stroke_data)
         tensor_input, length_ = data.get_data()
-        print(tensor_input.shape)
+        print(tensor_input)
         # print(tensor_input[:,-5:])
         
         # Get prediction
