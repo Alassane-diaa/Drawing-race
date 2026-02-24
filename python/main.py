@@ -11,7 +11,7 @@ DEVICE = "cpu"
 with open("categories.json", 'r') as file:
     cats = json.load(file)
 
-model = torch.load(os.path.join("models", "GRUModel.pt"), weights_only=False).to(DEVICE)
+model = torch.load(os.path.join("models", "GRUModel.pt"), weights_only=False, map_location=torch.device(DEVICE)).to(DEVICE)
 
 model.eval()
 
