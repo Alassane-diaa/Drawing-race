@@ -5,6 +5,7 @@ export default function Game() {
     const [brushState, setBrushState] = useState('pen'); // 'pen' or 'eraser'
     const [brushSize, setBrushSize] = useState(5);
     const [strokeCoords, setStrokeCoords] = useState([]);
+    const [predictionData, setPredictionData] = useState(null);
 
     const onMouseDownCanvas = (event) => {
         const canvas = canvasRef.current;
@@ -45,7 +46,10 @@ export default function Game() {
                 points: strokeCoords
             })
         });
-        console.log(await response.text());
+        const data = await response.json();
+        setPredictionData(data);
+        console.log("Top prediction:", data.prediction.category, data.prediction.confidence);
+        console.log("Top 10:", data.top10);
         setStrokeCoords([]);
     }
 
@@ -85,6 +89,24 @@ export default function Game() {
                 onMouseMove={handleMouseMoveCanvas}
                 onMouseUp={handleMouseUpCanvas}>
                 </canvas>
+            <div>
+                {predictionData ? (
+                    <div>
+                        <h2>Top Prediction: {predictionData.prediction.category}</h2>
+                        <p>Confidence: {(predictionData.prediction.confidence * 100).toFixed(2)}%</p>
+                        <h3>Top 10 Predictions:</h3>
+                        <ol>
+                            {predictionData.top10.map((pred, index) => (
+                                <li key={index}>
+                                    {pred.category} - {(pred.confidence * 100).toFixed(2)}%
+                                </li>
+                            ))}
+                        </ol>
+                    </div>
+                ) : (
+                    <p>Draw something to get predictions!</p>
+                )}
+            </div>
         
         </div>
     )
