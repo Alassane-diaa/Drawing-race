@@ -1,20 +1,17 @@
 import torch
-import torch.nn as nn
 import os
-import json
 from flask import Flask, request, jsonify
 from utils import Data
-from model import GRUModel
+from models import GRUModel, CNNModel
+
 DEVICE = "cpu"
 
 
-with open("categories.json", 'r') as file:
-    cats = json.load(file)
 
-model = torch.load(os.path.join("models", "GRUModel.pt"), weights_only=False, map_location=torch.device(DEVICE)).to(DEVICE)
-
-model.eval()
-
+model_gru = torch.load(os.path.join("models", "GRUModel.pt"), weights_only=False, map_location=torch.device(DEVICE)).to(DEVICE)
+model_cnn = torch.load(os.path.join("models", "CNNModel.pt"), weights_only=False, map_location=torch.device(DEVICE)).to(DEVICE)
+model_gru.eval()
+model_cnn.eval()
 data = Data()
 
 app = Flask(__name__)
@@ -26,34 +23,13 @@ def predict():
         # data.clear()
         stroke_data = request.json
         data.process_data(stroke_data)
-        tensor_input, length_ = data.get_data()
-        print(tensor_input)
-        # print(tensor_input[:,-5:])
-        
-        # Get prediction
-        with torch.no_grad():
-            output = model(tensor_input, length_)
-            probabilities = torch.softmax(output, dim=1)
-            
-            # Get top 10 predictions
-            top10_probs, top10_indices = torch.topk(probabilities, k=10, dim=1)
-            top10_probs = top10_probs.squeeze().tolist()
-            top10_indices = top10_indices.squeeze().tolist()
-            
-            # Get top prediction
-            prediction_ind = top10_indices[0]
-            prediction_class = cats[prediction_ind]
-            confidence = top10_probs[0]
-            
-            # Print top 10 categories
-            print("Top 10 predictions:")
-            for i, (idx, prob) in enumerate(zip(top10_indices, top10_probs), 1):
-                print(f"{i}. {cats[idx]} - {prob:.4f}")
-        
+        tensor_gru, length_, tensor_cnn = data.get_data()        
+        top_cats, top_probs = data.pre_models(model_gru, tensor_gru, length_, model_cnn, tensor_cnn)
+ 
         return jsonify({
-            'prediction': {'category': cats[prediction_ind], 'confidence': float(confidence)},
-            'top10': [{'category': cats[idx], 'confidence': float(prob)} 
-                      for idx, prob in zip(top10_indices, top10_probs)]
+            'prediction': {'category': top_cats[0], 'confidence': float(top_probs[0])},
+            'top10': [{'category': cat, 'confidence': float(prob)} 
+                      for cat, prob in zip(top_cats, top_probs)]
         })
     
     except Exception as e:

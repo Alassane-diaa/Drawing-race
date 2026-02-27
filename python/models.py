@@ -1,6 +1,21 @@
 import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence
+import torchvision
 
+class CNNModel(nn.Module):
+
+    def __init__(self, n_outputs = 345, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        weights = torchvision.models.ResNet34_Weights.IMAGENET1K_V1
+        model = torchvision.models.resnet34(weights=weights)
+        layers = list(model.children())
+        self.layers = nn.Sequential(*layers[:-1], nn.Flatten(1))
+        self.output = nn.Linear(512, 345)       
+
+    def forward(self, X):
+        X = self.layers(X)
+        return self.output(X)
 
 class GRUModel(nn.Module):
 

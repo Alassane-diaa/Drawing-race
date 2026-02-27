@@ -3,7 +3,7 @@
 Install:
 
 ```bash
-pip install torch Flask
+pip install torch torchvision numpy matplotlib Flask
 ```
 
 Run:
