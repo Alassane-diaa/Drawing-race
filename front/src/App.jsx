@@ -14,10 +14,9 @@ export default function App() {
 
         </main>
 
-        {/*mettre dans nav*/}
-        <footer>
+        <nav className= "footer">
             <h2>Projet Advanced Software Engineering</h2>
-        </footer>
+        </nav>
     </div>
   )
 }
