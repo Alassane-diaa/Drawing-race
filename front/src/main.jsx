@@ -5,6 +5,8 @@ import './index.css'
 import App from './App.jsx'
 import Game from './components/Game.jsx'
 import Stats from './components/Stats.jsx'
+import Auth from './components/Auth.jsx'
+
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -13,6 +15,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/" element={<App />} />
         <Route path="/game" element={<Game />} />
         <Route path="/stats" element={<Stats />} />
+        <Route path="/auth" element={<Auth />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,
