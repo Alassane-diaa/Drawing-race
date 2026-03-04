@@ -13,6 +13,8 @@ export default function Game() {
         const rect = canvas.getBoundingClientRect();
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
         ctx.lineWidth = brushSize;
         ctx.strokeStyle = brushState === 'pen' ? 'black' : 'white';
         ctx.beginPath();
