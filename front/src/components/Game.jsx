@@ -13,11 +13,12 @@ export default function Game() {
         const rect = canvas.getBoundingClientRect();
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
+        const pen = 0;
         ctx.lineWidth = brushSize;
         ctx.strokeStyle = brushState === 'pen' ? 'black' : 'white';
         ctx.beginPath();
         ctx.moveTo(x, y);
-        setStrokeCoords([{ x, y }]);
+        setStrokeCoords(prevCoords => [...prevCoords, { x, y, pen }]);
     }
 
     const handleMouseMoveCanvas = (event) => {
@@ -27,9 +28,10 @@ export default function Game() {
             const rect = canvas.getBoundingClientRect();
             const x = event.clientX - rect.left;
             const y = event.clientY - rect.top;
+            const pen = 0;
             ctx.lineTo(x, y);
             ctx.stroke();
-            setStrokeCoords(prevCoords => [...prevCoords, { x, y }]);
+            setStrokeCoords(prevCoords => [...prevCoords, { x, y, pen }]);
         }
     }
 
@@ -37,6 +39,11 @@ export default function Game() {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         ctx.closePath();
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        const pen = 1;
+        setStrokeCoords(prevCoords => [...prevCoords, { x, y, pen }]);
         const response = await fetch("http://localhost:8080/process", {
             method: "POST",
             headers: {
@@ -50,7 +57,6 @@ export default function Game() {
         setPredictionData(data);
         console.log("Top prediction:", data.prediction.category, data.prediction.confidence);
         console.log("Top 10:", data.top10);
-        setStrokeCoords([]);
     }
 
     const onClickCanvas = (event) => {
@@ -65,10 +71,12 @@ export default function Game() {
         ctx.fill();
     }
 
-    const clearCanvas = () => {
+    const clearCanvas = async () => {
+        setStrokeCoords([]);
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
     }
 
 

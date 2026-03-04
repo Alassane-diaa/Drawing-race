@@ -27,11 +27,9 @@ class Data:
         sample_freq = 5
         
         # Add new stroke points to accumulated raw points
-        points = data['points']
-        for i in range(len(points)):
-            if i % sample_freq == 0:
-                self.raw_points.append({'x': points[i]['x'], 'y': points[i]['y'], 'pen': 0.0})
-        self.raw_points[-1]['pen'] = 1.0
+        
+        self.raw_points = data['points']
+        print(self.raw_points)
         
         # Step 1: Find min_x and min_y across all accumulated points
         if not self.raw_points:
