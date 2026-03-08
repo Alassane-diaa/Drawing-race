@@ -24,9 +24,8 @@ def predict():
         stroke_data = request.json
         data.process_data(stroke_data)
         tensor_gru, length_, tensor_cnn = data.get_data()   
-        print(tensor_gru)     
         top_cats, top_probs = data.pre_models(model_gru, tensor_gru, length_, model_cnn, tensor_cnn)
- 
+        print(top_cats)
         return jsonify({
             'prediction': {'category': top_cats[0], 'confidence': float(top_probs[0])},
             'top10': [{'category': cat, 'confidence': float(prob)} 

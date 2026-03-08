@@ -70,6 +70,7 @@ class Data:
             if self.raw_points[i]['pen'] == 1:
                 self.data_cnn.append(stroke)
                 stroke = [[],[]]
+        print(self.raw_points)
 
         # Step 5: Calculate deltas from normalized points + center and reduce the deltas
         self.data_gru = []
