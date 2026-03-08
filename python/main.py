@@ -23,7 +23,8 @@ def predict():
         # data.clear()
         stroke_data = request.json
         data.process_data(stroke_data)
-        tensor_gru, length_, tensor_cnn = data.get_data()        
+        tensor_gru, length_, tensor_cnn = data.get_data()   
+        print(tensor_gru)     
         top_cats, top_probs = data.pre_models(model_gru, tensor_gru, length_, model_cnn, tensor_cnn)
  
         return jsonify({
