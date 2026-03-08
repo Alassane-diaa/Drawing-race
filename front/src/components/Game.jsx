@@ -43,20 +43,26 @@ export default function Game() {
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
         const pen = 1;
-        setStrokeCoords(prevCoords => [...prevCoords, { x, y, pen }]);
+        
+        // Create the updated coords array with the final point
+        // Without it, React updates insachroneously, then the last point isn't sent to the backend
+        const updatedCoords = [...strokeCoords, { x, y, pen }];
+        setStrokeCoords(updatedCoords);
+        
+        console.log(updatedCoords)
         const response = await fetch("http://localhost:8080/process", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                points: strokeCoords
+                points: updatedCoords
             })
         });
         const data = await response.json();
         setPredictionData(data);
-        console.log("Top prediction:", data.prediction.category, data.prediction.confidence);
-        console.log("Top 10:", data.top10);
+        // console.log("Top prediction:", data.prediction.category, data.prediction.confidence);
+        // console.log("Top 10:", data.top10);
     }
 
     const onClickCanvas = (event) => {
