@@ -13,14 +13,10 @@ export default function Game() {
         const rect = canvas.getBoundingClientRect();
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
-<<<<<<< front/src/components/Game.jsx
         const pen = 0;
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
-=======
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
->>>>>>> front/src/components/Game.jsx
+
         ctx.lineWidth = brushSize;
         ctx.strokeStyle = brushState === 'pen' ? 'black' : 'white';
         ctx.beginPath();
