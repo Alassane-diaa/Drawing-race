@@ -6,11 +6,13 @@ import jakarta.persistence.Embeddable;
 public class Point {
     private double x;
     private double y;
+    private int pen;
 
     public Point() {}
-    public Point(double x, double y) {
+    public Point(double x, double y, int pen) {
         this.x = x;
         this.y = y;
+        this.pen = pen;
     }
 
 
@@ -20,8 +22,11 @@ public class Point {
     public double getY() { return y; }
     public void setY(double y) { this.y = y; }
 
+    public int getPen() { return pen; }
+    public void setPen(int pen) { this.pen = pen; }
+
     @Override
     public String toString() {
-        return "(" + x + ", " + y + ")";
+        return "(" + x + ", " + y + pen + ")";
     }
 }

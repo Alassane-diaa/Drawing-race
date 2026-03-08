@@ -13,13 +13,19 @@ export default function Game() {
         const rect = canvas.getBoundingClientRect();
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
+<<<<<<< front/src/components/Game.jsx
+        const pen = 0;
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
+=======
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+>>>>>>> front/src/components/Game.jsx
         ctx.lineWidth = brushSize;
         ctx.strokeStyle = brushState === 'pen' ? 'black' : 'white';
         ctx.beginPath();
         ctx.moveTo(x, y);
-        setStrokeCoords([{ x, y }]);
+        setStrokeCoords(prevCoords => [...prevCoords, { x, y, pen }]);
     }
 
     const handleMouseMoveCanvas = (event) => {
@@ -29,9 +35,10 @@ export default function Game() {
             const rect = canvas.getBoundingClientRect();
             const x = event.clientX - rect.left;
             const y = event.clientY - rect.top;
+            const pen = 0;
             ctx.lineTo(x, y);
             ctx.stroke();
-            setStrokeCoords(prevCoords => [...prevCoords, { x, y }]);
+            setStrokeCoords(prevCoords => [...prevCoords, { x, y, pen }]);
         }
     }
 
@@ -39,20 +46,30 @@ export default function Game() {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         ctx.closePath();
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        const pen = 1;
+        
+        // Create the updated coords array with the final point
+        // Without it, React updates insachroneously, then the last point isn't sent to the backend
+        const updatedCoords = [...strokeCoords, { x, y, pen }];
+        setStrokeCoords(updatedCoords);
+        
+        console.log(updatedCoords)
         const response = await fetch("http://localhost:8080/process", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                points: strokeCoords
+                points: updatedCoords
             })
         });
         const data = await response.json();
         setPredictionData(data);
-        console.log("Top prediction:", data.prediction.category, data.prediction.confidence);
-        console.log("Top 10:", data.top10);
-        setStrokeCoords([]);
+        // console.log("Top prediction:", data.prediction.category, data.prediction.confidence);
+        // console.log("Top 10:", data.top10);
     }
 
     const onClickCanvas = (event) => {
@@ -67,10 +84,12 @@ export default function Game() {
         ctx.fill();
     }
 
-    const clearCanvas = () => {
+    const clearCanvas = async () => {
+        setStrokeCoords([]);
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
     }
 
 
