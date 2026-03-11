@@ -29,7 +29,6 @@ class Data:
         # Add new stroke points to accumulated raw points
         
         self.raw_points = data['points']
-        print(self.raw_points)
         
         # Step 1: Find min_x and min_y across all accumulated points
         if not self.raw_points:
@@ -142,7 +141,6 @@ class Data:
     
     def pre_models(self, model_gru, tensor_gru, lengths, model_cnn, tensor_cnn):
         p_cnn = (len(self.raw_points) / self.max_len)**(1/3.0)
-        print(p_cnn)
         # Get prediction
         with torch.no_grad():
             output_gru = model_gru(tensor_gru, lengths)
