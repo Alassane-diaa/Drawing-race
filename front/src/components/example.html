@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Microservices Demo</title>
+    <link href="style.css" rel="stylesheet"></link>
+</head>
+<body>
+
+<h2>Register</h2>
+<input id="regUsername" placeholder="Username">
+<input id="regPassword" type="password" placeholder="Password">
+<button onclick="register()">Register</button>
+
+<hr>
+
+<h2>Login</h2>
+<input id="loginUsername" placeholder="Username">
+<input id="loginPassword" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
+
+<hr>
+
+<h2>Call Protected API</h2>
+<button onclick="callTest('test')">Test authorized</button>
+<button onclick="callTest('testUser')">Test authorized user</button>
+<button onclick="callTest('testAdmin')">Test authorized admin</button>
+</br>
+</br>
+<div id="output"></div>
+
+<script>
+
+    let token = null;
+
+    function register() {
+        fetch("http://localhost:8080/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                username: document.getElementById("regUsername").value,
+                password: document.getElementById("regPassword").value
+            })
+        })
+            .then(res => res.json())
+            .then(data => {
+                token = data.token;
+                document.getElementById("output").innerText =
+                    "Registered!\nToken:\n" + token;
+            })
+            .catch(err => console.error(err));
+    }
+
+    function login() {
+        fetch("http://localhost:8080/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                username: document.getElementById("loginUsername").value,
+                password: document.getElementById("loginPassword").value
+            })
+        })
+            .then(res => {
+                if (!res.ok) {
+                    return res.json().then(errorData => {
+                        throw new Error(errorData.error || errorData.message || "Échec de connexion");
+                    });
+                }
+                return res.json();
+            })
+            .then(data => {
+                token = data.token;
+                document.getElementById("output").innerText =
+                    "Logged in!\nToken:\n" + token;
+            })
+            .catch(err => {
+                console.error("Erreur de login:", err);
+                document.getElementById("output").innerText =
+                    "Erreur: " + err.message;
+            });
+    }
+
+    function callTest(path) {
+
+        if (!token) {
+            alert("You must login first!");
+            return;
+        }
+
+        fetch("http://localhost:8080/"+path, {
+            method: "GET",
+            headers: {
+                "Authorization": "Bearer " + token
+            }
+        })
+            .then(res => res.text())
+            .then(data => {
+                document.getElementById("output").innerText =
+                    "API response:\n" + data;
+            })
+            .catch(err => console.error(err));
+    }
+
+</script>
+
+</body>
+</html>
