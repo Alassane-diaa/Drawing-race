@@ -30,7 +30,7 @@ export default function Register() {
     }
 
     return (
-        <div class="auth">
+        <div>
             Créer un compte 
             <input 
                 id="regUsername" 
