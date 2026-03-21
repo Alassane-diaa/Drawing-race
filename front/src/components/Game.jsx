@@ -7,6 +7,27 @@ export default function Game() {
     const [strokeCoords, setStrokeCoords] = useState([]);
     const [predictionData, setPredictionData] = useState(null);
 
+    function callTest(path) {
+
+        if (!token) {
+            alert("You must login first!");
+            return;
+        }
+
+        fetch("http://localhost:8080/"+path, {
+            method: "GET",
+            headers: {
+                "Authorization": "Bearer " + token
+            }
+        })
+            .then(res => res.text())
+            .then(data => {
+                document.getElementById("output").innerText =
+                    "API response:\n" + data;
+            })
+            .catch(err => console.error(err));
+    }
+
     const onMouseDownCanvas = (event) => {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
