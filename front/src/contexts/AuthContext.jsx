@@ -1,11 +1,14 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useState, useEffect, useRef } from 'react';
+import { authService } from '../services/authService';
 
-const AuthContext = createContext(null);
+export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
     const [token, setTokenState] = useState(() => localStorage.getItem('token'));
     const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user') || 'null'));
     const [isUser, setIsUserState] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const hasVerified = useRef(false);
 
     const setToken = (newToken) => {
         setTokenState(newToken);
@@ -18,39 +21,41 @@ export function AuthProvider({ children }) {
 
     const setIsUser = () => {
         return new Promise((resolve) => {
+            setIsLoading(true);
             if (!token) {
                 setIsUserState(false);
+                setIsLoading(false);
                 resolve(false);
                 return;
             }
 
-            fetch("http://localhost:8080/test", {
-                method: "GET",
-                headers: {
-                    "Authorization": "Bearer " + token
-                }
-            })
-                .then(res => {
-                    const isValid = res.ok;
+            authService.verifyToken(token)
+                .then(isValid => {
                     setIsUserState(isValid);
+                    setIsLoading(false);
                     resolve(isValid);
                 })
                 .catch(err => {
                     console.error(err);
                     setIsUserState(false);
+                    setIsLoading(false);
                     resolve(false);
                 });
         });
     };
 
-    // Verify user on mount or when token changes
+    // Verify user only once on mount
     useEffect(() => {
-        setIsUser();
-    }, [token]);
+        if (!hasVerified.current) {
+            hasVerified.current = true;
+            setIsUser();
+        }
+    }, []);
 
     const login = (newToken, userData) => {
         setToken(newToken);
         setUser(userData);
+        setIsUserState(true);
         localStorage.setItem('user', JSON.stringify(userData));
     };
 
@@ -62,16 +67,8 @@ export function AuthProvider({ children }) {
     };
 
     return (
-        <AuthContext.Provider value={{ token, user, isUser, login, logout, setToken, setIsUser }}>
+        <AuthContext.Provider value={{ token, user, isUser, isLoading, login, logout }}>
             {children}
         </AuthContext.Provider>
     );
-}
-
-export function useAuth() {
-    const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error('useAuth must be used within AuthProvider');
-    }
-    return context;
 }

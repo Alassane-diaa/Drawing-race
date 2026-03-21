@@ -1,10 +1,17 @@
 import { useState } from "react";
-import { useAuth } from '../contexts/AuthContext';
 
-export default function Auth({ title, buttonText, auth_fn }) {
-    const { login } = useAuth();
+export default function AuthForm({ title, buttonText, auth_fn }) {
     const [user, setUser] = useState({ username: "", password: "" });
     const [message, setMessage] = useState("");
+
+    const setMessageFn = (msg) => setMessage(msg);
+    
+    // auth_fn expects (user, login, setMessage)
+    // but we're now passing login directly in the page component
+    // so we need to adapt this
+    const handleSubmit = () => {
+        auth_fn(user, null, setMessageFn);
+    };
 
     return (
         <div>
@@ -20,7 +27,7 @@ export default function Auth({ title, buttonText, auth_fn }) {
                 value={user.password}
                 onChange={(e) => setUser({...user, password: e.target.value})}
             />
-            <button onClick={() => auth_fn(user, login, setMessage)}>
+            <button onClick={handleSubmit}>
                 {buttonText}
             </button>
             <div>{message}</div>
