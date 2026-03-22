@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 
-export default function Game() {
+export default function GamePage() {
     const canvasRef = useRef(null);
     const [brushState, setBrushState] = useState('pen'); // 'pen' or 'eraser'
     const [brushSize, setBrushSize] = useState(5);
@@ -64,8 +64,6 @@ export default function Game() {
         });
         const data = await response.json();
         setPredictionData(data);
-        // console.log("Top prediction:", data.prediction.category, data.prediction.confidence);
-        // console.log("Top 10:", data.top10);
     }
 
     const onClickCanvas = (event) => {
@@ -85,9 +83,7 @@ export default function Game() {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
     }
-
 
     return (
         <div className="game">

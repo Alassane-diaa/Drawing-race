@@ -145,13 +145,13 @@ class Data:
         with torch.no_grad():
             output_gru = model_gru(tensor_gru, lengths)
             probabilities_gru = torch.softmax(output_gru, dim=1)
-            top_probs_gru, top_indices_gru = torch.topk(probabilities_gru, k=10, dim=1)
+            top_probs_gru, top_indices_gru = torch.topk(probabilities_gru, k=5, dim=1)
             top_probs_gru = top_probs_gru.squeeze().tolist()
             top_indices_gru = top_indices_gru.squeeze().tolist()
         with torch.no_grad():
             output_cnn = model_cnn(tensor_cnn)
             probabilities_cnn = torch.softmax(output_cnn, dim=1)
-            top_probs_cnn, top_indices_cnn = torch.topk(probabilities_cnn, k=10, dim=1)
+            top_probs_cnn, top_indices_cnn = torch.topk(probabilities_cnn, k=5, dim=1)
             top_probs_cnn = top_probs_cnn.squeeze().tolist()
             top_indices_cnn = top_indices_cnn.squeeze().tolist()
         
@@ -176,6 +176,9 @@ class Data:
         
         top_cats = [self.cats[idx] for idx, _ in top_5]
         top_probs = [prob for _, prob in top_5]
+        # Normalize to probability distribution with linear rescaling
+        total = sum(top_probs)
+        top_probs = [p / total for p in top_probs]
             
         return top_cats, top_probs
             
