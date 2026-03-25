@@ -17,7 +17,7 @@ services:
       - SPRING_JPA_SHOW_SQL=true
     depends_on:
       db:
-        condition: service_started
+        condition: service_healthy
       python-ml:
         condition: service_started
     networks:
@@ -60,6 +60,12 @@ services:
       - "3306"
     volumes:
       - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     networks:
       - drawing-network
 
