@@ -66,3 +66,8 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+@keyframes rainbowSpin {
+    0%   { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+}
