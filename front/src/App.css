@@ -44,8 +44,8 @@ header{
   font-size: larger;
 }
 
-button{
-    margin: 0.5em;
+.Tool{
+    margin: 0.5em 0.5em 1em 0.5em;
 }
 
 .read-the-docs {

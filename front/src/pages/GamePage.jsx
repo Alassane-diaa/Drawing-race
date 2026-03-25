@@ -176,13 +176,13 @@ export default function GamePage() {
             </div>
 
             <div>
-                <button onClick={startNewGame}>Start / Reset</button>
+                <button className = "grosBouton" onClick={startNewGame}>Start / Reset</button>
             </div>
 
             <div>
-                <button onClick={() => setBrushState('pen')}>Pen</button>
-                <button onClick={() => setBrushState('eraser')}>Eraser</button>
-                <button onClick={clearCanvas}>Clear</button>
+                <button className = "Tool" onClick={() => setBrushState('pen')}>Pen</button>
+                <button className = "Tool" onClick={() => setBrushState('eraser')}>Eraser</button>
+                <button className = "Tool" onClick={clearCanvas}>Clear</button>
                 <input type="range" value={brushSize} onChange={(e) => setBrushSize(parseInt(e.target.value))} min="1" max="50" />
             </div>
             <canvas ref={canvasRef} 
