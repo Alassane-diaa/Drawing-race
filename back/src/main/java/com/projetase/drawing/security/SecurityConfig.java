@@ -31,6 +31,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/login", "/auth/register", "/process").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // ← OPTIONS sur toutes les routes
+                        .requestMatchers("/user/leaderboard", "/user/avatar/**").permitAll()
                         .requestMatchers("/testAdmin").hasAuthority("ADMIN")
                         .requestMatchers("/testUser").hasAuthority("USER")
                         .anyRequest().authenticated()
