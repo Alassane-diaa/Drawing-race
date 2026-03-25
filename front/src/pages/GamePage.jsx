@@ -102,12 +102,11 @@ export default function GamePage() {
 
     return (
         <div className="game">
-            <h1>Quick, Draw!</h1>
+            <h1>Quick, Draw:</h1>
 
-            {/* Affichage de l'objectif */}
-            <div style={{ marginBottom: '20px', fontSize: '1.5rem' }}>
+            <div className="CategoryADessiner">
                 {targetCategory ? (
-                    <p> <strong>{targetCategory}</strong></p>
+                    <h2> -> <strong> {targetCategory} </strong> {"<-"} </h2>
                 ) : (
                     <p>Loading...</p>
                 )}

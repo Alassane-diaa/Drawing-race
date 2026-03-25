@@ -2,20 +2,11 @@
 
 package com.projetase.drawing.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.projetase.drawing.model.PredictionResponse;
 import com.projetase.drawing.model.Stroke;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.*;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
 
 @Service
 public class PredictionService {
@@ -46,30 +37,4 @@ public class PredictionService {
             throw new RuntimeException("Failed to get prediction from AI model", e);
         }
     }
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
-    private final Random random = new Random();
-
-    public String getRandomCategory() throws IOException {
-
-        File jsonFile = new File("python/categories.json");
-
-        if (!jsonFile.exists()) {
-            jsonFile = new File("../python/categories.json");
-        }
-
-        if (!jsonFile.exists()) {
-            throw new IOException("Le fichier categories.json est introuvable à : " + jsonFile.getAbsolutePath());
-        }
-
-        // Lecture du JSON
-        JsonNode rootNode = objectMapper.readTree(jsonFile);
-        List<String> categories = new ArrayList<>();
-
-        rootNode.forEach(node -> categories.add(node.asText()));
-        System.out.println(random.nextInt(categories.size()));
-
-        return categories.get(random.nextInt(categories.size()));
-    }
-
 }
