@@ -18,7 +18,7 @@ export default function StatsPage() {
         
         userService.getLeaderboard()
             .then(data => setLeaderboard(data))
-            .catch(err => setError(err.message));
+            .catch(err => console.warn("Leaderboard:", err.message));
 
     }, [isUser, token]);
 
@@ -29,48 +29,85 @@ export default function StatsPage() {
 
     const canActivate = stats.wins > -1;
 
+    // ... (imports et logique du composant identiques)
+
     return (
         <div style={{ 
-            display: 'flex', 
-            flexDirection: 'row', 
-            alignItems: 'center', 
-            gap: '2rem',  
-            flexWrap: 'wrap', 
-            justifyContent: 'space-evenly',
-        
+            display: 'grid', 
+            gridTemplateColumns: '1fr auto 1fr', /* LE SECRET EST ICI : 3 colonnes parfaites */
+            gap: '4rem', /* Le gap conséquent entre les 3 éléments */
+            alignItems: 'start', /* Aligne tout par le haut */
+            padding: '2rem',
+            width: '100%',
+            boxSizing: 'border-box'
         }}>
             
-            <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingRight: '0.5rem' }}>
-                {leaderboard === null ? (
-                    <p>Chargement...</p>
-                ) : (
-                    leaderboard.map((player, index) => (
-                        <div key={player.id} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 60px', alignItems: 'center' }}>
-                            <span style={{ 
-                                fontWeight: 'bold',
-                                color: index === 0 ? '#ffb703' : index === 1 ? '#888' : index === 2 ? '#cd7f32' : '#000'
-                            }}>
-                                {index + 1}
-                            </span>
-                            <span>{player.username}</span>
-                            <span style={{ textAlign: 'right', fontWeight: 500 }}>{player.wins}</span>
-                        </div>
-                    ))
-                )}
+            {/* === COLONNE 1 : LEADERBOARD === */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    maxHeight: '400px',
+                    width: '300px', /* Fixe la largeur du leaderboard */
+                    backgroundColor: '#fff', 
+                    borderRadius: '8px', 
+                    padding: '1rem',
+                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                }}>
+                    <h3 style={{ marginTop: 0, marginBottom: '1rem', textAlign: 'center' }}>Le Leaderboard</h3>
+                    
+                    {/* En-tête des colonnes (Fixe) */}
+                    <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: '40px 1fr 60px', 
+                        fontWeight: 'bold', 
+                        borderBottom: '2px solid #eee', 
+                        paddingBottom: '0.5rem', 
+                        marginBottom: '0.5rem' 
+                    }}>
+                        <span>#</span>
+                        <span>Joueur</span>
+                        <span style={{ textAlign: 'right' }}>Score</span>
+                    </div>
+
+                    {/* Zone Scrollable */}
+                    <div style={{ 
+                        overflowY: 'auto', 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        gap: '0.75rem', 
+                        paddingRight: '0.5rem' 
+                    }}>
+                                        {leaderboard === null ? (
+                        <p>Chargement...</p>
+                    ) : (
+                        leaderboard.map((player, index) => (
+                            <div key={player.id} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 60px', alignItems: 'center' }}>
+                                <span style={{ 
+                                    fontWeight: 'bold',
+                                    color: index === 0 ? '#ffb703' : index === 1 ? '#888' : index === 2 ? '#cd7f32' : '#000'
+                                }}>
+                                    {index + 1}
+                                </span>
+                                <span>{player.username}</span>
+                                <span style={{ textAlign: 'right', fontWeight: 500 }}>{player.wins}</span>
+                            </div>
+                        ))
+                    )}
+                    </div>
+                </div>
             </div>
 
+            {/* === COLONNE 2 : STATS ET PROFIL (Le Vrai Centre) === */}
             <div style={{ 
                 display: 'flex', 
                 flexDirection: 'column', 
                 alignItems: 'center', 
-                gap: '2rem', 
-                padding: '2rem', 
-                order: 2, 
+                gap: '2rem'
             }}>
-
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
                     <div style={{ position: 'relative', width: 108, height: 108, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-
+                        
                         {!rainbowActive && (
                             <div style={{
                                 position: 'absolute', inset: -4,
@@ -111,7 +148,7 @@ export default function StatsPage() {
                     </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                <div style={{ display: 'flex', gap: '12px' }}>
                     <StatCard label="Parties"   value={stats.gamesPlayed} />
                     <StatCard label="Victoires" value={stats.wins} />
                     <StatCard label="Précision" value={`${stats.accuracy}%`} />
@@ -124,21 +161,17 @@ export default function StatsPage() {
                 >
                     {rainbowActive ? '✦ Désactiver le liseré' : '✦ Activer le liseré champion'}
                 </button>
-
             </div>
                             
-            <div style={{ 
-                order: 3,
-                justifyContent: 'flex-end',
-                flex: 1,
-                paddingLeft: '4rem'
-             }}>
-                <p>Badges</p>
+            {/* === COLONNE 3 : BADGES === */}
+            <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                <p style={{ marginTop: 0 }}>Badges</p>
             </div>                
 
         </div>
     );
 }
+
 
 function StatCard({ label, value }) {
     return (
