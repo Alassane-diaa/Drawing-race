@@ -44,6 +44,10 @@ header{
   font-size: larger;
 }
 
+button{
+    margin: 0.5em;
+}
+
 .read-the-docs {
   color: #888;
 }

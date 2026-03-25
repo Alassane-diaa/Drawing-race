@@ -22,9 +22,9 @@ export default function GamePage() {
     };
     const [timeLeft, setTimeLeft] = useState(getInitialTime());
     const getInitialPalier = () => {
-        if (selectedDifficulty === "easy") return 80;
-        if (selectedDifficulty === "hard") return 99;
-        return 90;
+        if (selectedDifficulty === "easy") return 0.8;
+        if (selectedDifficulty === "hard") return 0.99;
+        return 0.9;
     };
     const palierConfidence = useState(getInitialPalier())[0];
 

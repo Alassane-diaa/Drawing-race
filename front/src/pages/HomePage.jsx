@@ -49,7 +49,7 @@ export default function HomePage() {
         
 
         <nav className= "footer">
-            <h2>Projet Advanced Software Engineering</h2>
+            <h3>Projet Advanced Software Engineering</h3>
         </nav>
     </div>
   )
