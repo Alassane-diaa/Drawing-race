@@ -5,6 +5,7 @@ import { userService } from '../services/userService';
 export default function StatsPage() {
     const { token, isUser, isLoading } = useAuth();
     const [stats, setStats] = useState(null);
+    const [leaderboard, setLeaderboard] = useState(null);
     const [error, setError] = useState(null);
     const [rainbowActive, setRainbowActive] = useState(false);
 
@@ -14,6 +15,11 @@ export default function StatsPage() {
         userService.getMyStats(token)
             .then(data => setStats(data))
             .catch(err => setError(err.message));
+        
+        userService.getLeaderboard()
+            .then(data => setLeaderboard(data))
+            .catch(err => setError(err.message));
+
     }, [isUser, token]);
 
     if (isLoading)  return <p>Chargement...</p>;
@@ -34,118 +40,23 @@ export default function StatsPage() {
         
         }}>
             
-            <div style={{ 
-                order: 1, 
-                display: 'flex', 
-                flexDirection: 'column',
-                flex: 1,
-                maxHeight: '400px', 
-                width: '600px', 
-                backgroundColor: '#fff', 
-                borderRadius: '8px', 
-                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                paddingRight: '4rem'
-            }}>
-                <h3 style={{ marginTop: 0, marginBottom: '1rem', textAlign: 'center' }}>Le Leaderboard</h3>
-                
-                <div style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: '40px 1fr 60px', 
-                    fontWeight: 'bold', 
-                    borderBottom: '2px solid #eee', 
-                    paddingBottom: '0.5rem', 
-                    marginBottom: '0.5rem' 
-                }}>
-                    <span>#</span>
-                    <span>Joueur</span>
-                    <span style={{ textAlign: 'right' }}>Number of wins</span>
-                </div>
-
-                {/* Zone Scrollable */}
-                <div style={{ 
-                    overflowY: 'auto', 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    gap: '0.75rem', 
-                    paddingRight: '0.5rem' 
-                }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 60px', alignItems: 'center' }}>
-                        <span style={{ color: '#ffb703', fontWeight: 'bold' }}>1</span>
-                        <span>Alice</span>
-                        <span style={{ textAlign: 'right', fontWeight: '500' }}>2450</span>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 60px', alignItems: 'center' }}>
-                        <span style={{ color: '#888', fontWeight: 'bold' }}>2</span>
-                        <span>Bob</span>
-                        <span style={{ textAlign: 'right', fontWeight: '500' }}>1890</span>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 60px', alignItems: 'center' }}>
-                        <span style={{ color: '#cd7f32', fontWeight: 'bold' }}>3</span>
-                        <span>Charlie</span>
-                        <span style={{ textAlign: 'right', fontWeight: '500' }}>1650</span>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 60px', alignItems: 'center' }}>
-                        <span style={{ color: '#cd7f32', fontWeight: 'bold' }}>3</span>
-                        <span>Charlie</span>
-                        <span style={{ textAlign: 'right', fontWeight: '500' }}>1650</span>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 60px', alignItems: 'center' }}>
-                        <span style={{ color: '#cd7f32', fontWeight: 'bold' }}>3</span>
-                        <span>Charlie</span>
-                        <span style={{ textAlign: 'right', fontWeight: '500' }}>1650</span>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 60px', alignItems: 'center' }}>
-                        <span style={{ color: '#cd7f32', fontWeight: 'bold' }}>3</span>
-                        <span>Charlie</span>
-                        <span style={{ textAlign: 'right', fontWeight: '500' }}>1650</span>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 60px', alignItems: 'center' }}>
-                        <span style={{ color: '#cd7f32', fontWeight: 'bold' }}>3</span>
-                        <span>Charlie</span>
-                        <span style={{ textAlign: 'right', fontWeight: '500' }}>1650</span>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 60px', alignItems: 'center' }}>
-                        <span style={{ color: '#cd7f32', fontWeight: 'bold' }}>3</span>
-                        <span>Charlie</span>
-                        <span style={{ textAlign: 'right', fontWeight: '500' }}>1650</span>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 60px', alignItems: 'center' }}>
-                        <span style={{ color: '#cd7f32', fontWeight: 'bold' }}>3</span>
-                        <span>Charlie</span>
-                        <span style={{ textAlign: 'right', fontWeight: '500' }}>1650</span>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 60px', alignItems: 'center' }}>
-                        <span style={{ color: '#cd7f32', fontWeight: 'bold' }}>3</span>
-                        <span>Charlie</span>
-                        <span style={{ textAlign: 'right', fontWeight: '500' }}>1650</span>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 60px', alignItems: 'center' }}>
-                        <span style={{ color: '#cd7f32', fontWeight: 'bold' }}>3</span>
-                        <span>Charlie</span>
-                        <span style={{ textAlign: 'right', fontWeight: '500' }}>1650</span>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 60px', alignItems: 'center' }}>
-                        <span style={{ color: '#cd7f32', fontWeight: 'bold' }}>3</span>
-                        <span>Charlie</span>
-                        <span style={{ textAlign: 'right', fontWeight: '500' }}>1650</span>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 60px', alignItems: 'center' }}>
-                        <span style={{ color: '#cd7f32', fontWeight: 'bold' }}>3</span>
-                        <span>Charlie</span>
-                        <span style={{ textAlign: 'right', fontWeight: '500' }}>1650</span>
-                    </div>
-
-                </div>
+            <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingRight: '0.5rem' }}>
+                {leaderboard === null ? (
+                    <p>Chargement...</p>
+                ) : (
+                    leaderboard.map((player, index) => (
+                        <div key={player.id} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 60px', alignItems: 'center' }}>
+                            <span style={{ 
+                                fontWeight: 'bold',
+                                color: index === 0 ? '#ffb703' : index === 1 ? '#888' : index === 2 ? '#cd7f32' : '#000'
+                            }}>
+                                {index + 1}
+                            </span>
+                            <span>{player.username}</span>
+                            <span style={{ textAlign: 'right', fontWeight: 500 }}>{player.wins}</span>
+                        </div>
+                    ))
+                )}
             </div>
 
             <div style={{ 
