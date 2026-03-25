@@ -34,21 +34,20 @@ export default function StatsPage() {
     return (
         <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: '1fr auto 1fr', /* LE SECRET EST ICI : 3 colonnes parfaites */
-            gap: '4rem', /* Le gap conséquent entre les 3 éléments */
-            alignItems: 'start', /* Aligne tout par le haut */
+            gridTemplateColumns: '1fr auto 1fr', 
+            gap: '4rem', 
+            alignItems: 'start', 
             padding: '2rem',
             width: '100%',
             boxSizing: 'border-box'
         }}>
             
-            {/* === COLONNE 1 : LEADERBOARD === */}
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <div style={{ 
                     display: 'flex', 
                     flexDirection: 'column', 
                     maxHeight: '400px',
-                    width: '300px', /* Fixe la largeur du leaderboard */
+                    width: '300px', 
                     backgroundColor: '#fff', 
                     borderRadius: '8px', 
                     padding: '1rem',
@@ -56,7 +55,6 @@ export default function StatsPage() {
                 }}>
                     <h3 style={{ marginTop: 0, marginBottom: '1rem', textAlign: 'center' }}>Le Leaderboard</h3>
                     
-                    {/* En-tête des colonnes (Fixe) */}
                     <div style={{ 
                         display: 'grid', 
                         gridTemplateColumns: '40px 1fr 60px', 
@@ -70,7 +68,7 @@ export default function StatsPage() {
                         <span style={{ textAlign: 'right' }}>Score</span>
                     </div>
 
-                    {/* Zone Scrollable */}
+        
                     <div style={{ 
                         overflowY: 'auto', 
                         display: 'flex', 
@@ -98,7 +96,6 @@ export default function StatsPage() {
                 </div>
             </div>
 
-            {/* === COLONNE 2 : STATS ET PROFIL (Le Vrai Centre) === */}
             <div style={{ 
                 display: 'flex', 
                 flexDirection: 'column', 
@@ -163,7 +160,6 @@ export default function StatsPage() {
                 </button>
             </div>
                             
-            {/* === COLONNE 3 : BADGES === */}
             <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
                 <p style={{ marginTop: 0 }}>Badges</p>
             </div>                
@@ -179,5 +175,13 @@ function StatCard({ label, value }) {
             <p style={{ margin: '0 0 4px', fontSize: 12, color: '#888' }}>{label}</p>
             <p style={{ margin: 0, fontSize: 24, fontWeight: 500 }}>{value}</p>
         </div>
+    );
+}
+
+function Badge({}) {
+    return (
+        <>
+
+        </>
     );
 }
