@@ -40,7 +40,7 @@ export default function StatsPage() {
                 flexDirection: 'column',
                 flex: 1,
                 maxHeight: '400px', 
-                width: '300px', 
+                width: '600px', 
                 backgroundColor: '#fff', 
                 borderRadius: '8px', 
                 boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
@@ -58,7 +58,7 @@ export default function StatsPage() {
                 }}>
                     <span>#</span>
                     <span>Joueur</span>
-                    <span style={{ textAlign: 'right' }}>Score</span>
+                    <span style={{ textAlign: 'right' }}>Number of wins</span>
                 </div>
 
                 {/* Zone Scrollable */}
