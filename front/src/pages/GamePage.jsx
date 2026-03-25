@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { useLocation } from "react-router-dom";
 
 export default function GamePage() {
     const canvasRef = useRef(null);
@@ -7,10 +8,67 @@ export default function GamePage() {
     const [strokeCoords, setStrokeCoords] = useState([]);
     const [predictionData, setPredictionData] = useState(null);
     const [targetCategory, setTargetCategory] = useState("");
+    // Pour timer
+    const [isActive, setIsActive] = useState(false);
+    // Difficulty
+    const location = useLocation();
+    const selectedDifficulty = location.state?.difficulty || "medium";
+
+    // Selon la difficulté
+    const getInitialTime = () => {
+        if (selectedDifficulty === "easy") return 20;
+        if (selectedDifficulty === "hard") return 10;
+        return 15;
+    };
+    const [timeLeft, setTimeLeft] = useState(getInitialTime());
+    const getInitialPalier = () => {
+        if (selectedDifficulty === "easy") return 80;
+        if (selectedDifficulty === "hard") return 99;
+        return 90;
+    };
+    const palierConfidence = useState(getInitialPalier())[0];
+
 
     useEffect(() => {
-        fetchRandomCategory();
+        startNewGame();
     }, []);
+
+    // Compte à rebours
+    useEffect(() => {
+        let interval = null;
+        if (isActive && timeLeft > 0) {
+            interval = setInterval(() => {
+                setTimeLeft((time) => time - 1);
+            }, 1000);
+        } else if (timeLeft === 0) {
+            setIsActive(false);
+            clearInterval(interval);
+            handleTimeUp();
+        }
+        return () => clearInterval(interval);
+    }, [isActive, timeLeft]);
+
+    const startNewGame = async () => {
+        await fetchRandomCategory();
+        setTimeLeft(getInitialTime())
+        setIsActive(true);
+        clearCanvas();
+    };
+
+    const handleTimeUp = () => {
+        alert(`Time's Up ! You had to draw: ${targetCategory}`);
+        // Enlever les alerts et afficher la page suivante
+        //
+        //
+    };
+    // Gestion Victoire
+    useEffect(() => {
+        if (predictionData && predictionData.prediction.category === targetCategory && predictionData.prediction.confidence >= palierConfidence) {
+            setIsActive(false); // Stop le timer
+            alert("Congratulations! The AI recognized your drawing!");
+            // Enlever les alertes euh et lier tot ça à la difficulté
+        }
+    }, [predictionData, targetCategory]);
 
     const fetchRandomCategory = async () => {
         try {
@@ -40,6 +98,7 @@ export default function GamePage() {
     }
 
     const handleMouseMoveCanvas = (event) => {
+        if (!isActive) return;
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         if (event.buttons === 1) { // Left mouse button
@@ -110,6 +169,14 @@ export default function GamePage() {
                 ) : (
                     <p>Loading...</p>
                 )}
+            </div>
+
+            <div>
+                00:{timeLeft < 10 ? `0${timeLeft}` : timeLeft}
+            </div>
+
+            <div>
+                <button onClick={startNewGame}>Start / Reset</button>
             </div>
 
             <div>

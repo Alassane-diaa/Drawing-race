@@ -1,9 +1,7 @@
 package com.projetase.drawing.GameLogic;
 
 import com.projetase.drawing.model.*;
-import com.projetase.drawing.service.PredictionService;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
