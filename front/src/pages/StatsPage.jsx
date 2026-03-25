@@ -1,14 +1,27 @@
 import { useAuth } from '../hooks/useAuth';
 import { useEffect, useState } from 'react';
+import { userService } from '../services/userService';
 
 export default function StatsPage() {
-    const { user, isUser, isLoading } = useAuth();
+    const { token, isUser, isLoading } = useAuth();
+    const [stats, setStats] = useState(null);
+    const [error, setError] = useState(null);
     const [rainbowActive, setRainbowActive] = useState(false);
 
-    if (isLoading) return <p>Chargement...</p>;
-    if (!isUser)   return <p>Connecte-toi pour voir tes stats.</p>;
+    useEffect(() => {
+        if (!isUser) return;
 
-    const canActivate = user.wins > 10;
+        userService.getMyStats(token)
+            .then(data => setStats(data))
+            .catch(err => setError(err.message));
+    }, [isUser, token]);
+
+    if (isLoading)  return <p>Chargement...</p>;
+    if (!isUser)    return <p>Connecte-toi pour voir tes stats.</p>;
+    if (error)      return <p>Erreur : {error}</p>;
+    if (!stats)     return <p>Chargement des stats...</p>;
+
+    const canActivate = stats.wins > -1;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', padding: '2rem' }}>
@@ -42,7 +55,9 @@ export default function StatsPage() {
                     )}
 
                     <img
-                        src={user.avatarUrl || '/default-avatar.png'}
+                        src={stats.avatarFilename
+                            ? `http://localhost:8080/user/avatar/${stats.avatarFilename}`
+                            : '/default-avatar.png'}
                         alt="Photo de profil"
                         style={{
                             position: 'relative', zIndex: 2,
@@ -53,13 +68,13 @@ export default function StatsPage() {
                     />
                 </div>
 
-                <p style={{ fontWeight: 500, fontSize: 20 }}>{user.username}</p>
+                <p style={{ fontWeight: 500, fontSize: 20 }}>{stats.username}</p>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-                <StatCard label="Parties"   value={user.gamesPlayed} />
-                <StatCard label="Victoires" value={user.wins} />
-                <StatCard label="Précision" value={`${user.accuracy}%`} />
+                <StatCard label="Parties"   value={stats.gamesPlayed} />
+                <StatCard label="Victoires" value={stats.wins} />
+                <StatCard label="Précision" value={`${stats.accuracy}%`} />
             </div>
 
             <button
