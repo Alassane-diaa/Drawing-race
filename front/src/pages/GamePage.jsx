@@ -53,7 +53,7 @@ export default function GamePage() {
         setStrokeCoords(updatedCoords);
         
         console.log(updatedCoords)
-        const response = await fetch("http://localhost:8080/process", {
+        const response = await fetch(`http://localhost:8080/process`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -62,6 +62,13 @@ export default function GamePage() {
                 points: updatedCoords
             })
         });
+        
+        if (!response.ok) {
+            const text = await response.text();
+            console.error("API Error:", response.status, text);
+            return;
+        }
+        
         const data = await response.json();
         setPredictionData(data);
     }
