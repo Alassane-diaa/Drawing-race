@@ -1,0 +1,86 @@
+services:
+  backend:
+    build:
+      context: ./back
+      dockerfile: Dockerfile
+    container_name: drawing-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVER_PORT=8080
+      - SERVER_ADDRESS=0.0.0.0
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://db:3306/mydb
+      - SPRING_DATASOURCE_USERNAME=appuser
+      - SPRING_DATASOURCE_PASSWORD=apppassword
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.mariadb.jdbc.Driver
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_SHOW_SQL=true
+    depends_on:
+      db:
+        condition: service_started
+      python-ml:
+        condition: service_started
+    networks:
+      - drawing-network
+
+  frontend:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:8080
+    container_name: drawing-frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - drawing-network
+
+  python-ml:
+    build:
+      context: ./python
+      dockerfile: Dockerfile
+    container_name: drawing-ml
+    ports:
+      - "5000:5000"
+    networks:
+      - drawing-network
+
+
+  db:
+    image: mariadb:11
+    container_name: drawing-db
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: mydb
+      MARIADB_USER: appuser
+      MARIADB_PASSWORD: apppassword
+    expose:
+      - "3306"
+    volumes:
+      - db-data:/var/lib/mysql
+    networks:
+      - drawing-network
+
+  nginx:
+    image: nginx:stable
+    container_name: drawing-nginx
+    ports:
+      - "9000:8080"
+      - "9443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - drawing-network
+
+volumes:
+  db-data:
+
+networks:
+  drawing-network:
+    driver: bridge

@@ -12,7 +12,7 @@ import org.springframework.http.*;
 public class PredictionService {
 
     private final RestTemplate restTemplate;
-    private final String PYTHON_API_URL = "http://localhost:5000/predict";
+    private final String PYTHON_API_URL = "http://python-ml:5000/predict";
 
     public PredictionService() {
         this.restTemplate = new RestTemplate();
