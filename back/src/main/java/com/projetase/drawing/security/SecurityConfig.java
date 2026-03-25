@@ -24,7 +24,7 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable) // désactive page login HTML
                 .httpBasic(AbstractHttpConfigurer::disable) // désactive basic auth
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/login", "/auth/register", "/process").permitAll()
+                        .requestMatchers("/auth/login", "/auth/register", "/process", "/ws/**", "/game/**").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/test","/testAdmin","/testUser").permitAll()
                         .requestMatchers( "/testAdmin").hasAuthority("ADMIN")
                         .requestMatchers( "/testUser").hasAuthority("USER")
