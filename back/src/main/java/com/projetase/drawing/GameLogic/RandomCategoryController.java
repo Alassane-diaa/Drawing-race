@@ -18,7 +18,6 @@ public class RandomCategoryController {
     public ResponseEntity<?> getRandomCategory() {
         try {
             String category = randomCategoryService.getRandomCategory();
-            System.out.println(ResponseEntity.ok(Collections.singletonMap("category", category)));
             return ResponseEntity.ok(Collections.singletonMap("category", category));
         } catch (IOException e) {
             System.err.println("Erreur categories.json: " + e.getMessage());

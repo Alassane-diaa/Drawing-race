@@ -30,7 +30,6 @@ public class randomCategoryService {
         List<String> categories = new ArrayList<>();
 
         rootNode.forEach(node -> categories.add(node.asText()));
-        System.out.println(random.nextInt(categories.size()));
 
         return categories.get(random.nextInt(categories.size()));
     }
