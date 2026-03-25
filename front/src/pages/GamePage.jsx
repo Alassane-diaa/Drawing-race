@@ -6,6 +6,21 @@ export default function GamePage() {
     const [brushSize, setBrushSize] = useState(5);
     const [strokeCoords, setStrokeCoords] = useState([]);
     const [predictionData, setPredictionData] = useState(null);
+    const [targetCategory, setTargetCategory] = useState("");
+
+    useEffect(() => {
+        fetchRandomCategory();
+    }, []);
+
+    const fetchRandomCategory = async () => {
+        try {
+            const response = await fetch("http://localhost:8080/random-category");
+            const data = await response.json();
+            setTargetCategory(data.category);
+        } catch (error) {
+            console.error("Erreur lors du chargement de la catégorie :", error);
+        }
+    };
 
     const onMouseDownCanvas = (event) => {
         const canvas = canvasRef.current;
@@ -87,7 +102,17 @@ export default function GamePage() {
 
     return (
         <div className="game">
-            <h1>Game</h1>
+            <h1>Quick, Draw!</h1>
+
+            {/* Affichage de l'objectif */}
+            <div style={{ marginBottom: '20px', fontSize: '1.5rem' }}>
+                {targetCategory ? (
+                    <p> <strong>{targetCategory}</strong></p>
+                ) : (
+                    <p>Loading...</p>
+                )}
+            </div>
+
             <div>
                 <button onClick={() => setBrushState('pen')}>Pen</button>
                 <button onClick={() => setBrushState('eraser')}>Eraser</button>
