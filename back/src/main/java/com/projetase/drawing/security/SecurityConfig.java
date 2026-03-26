@@ -25,6 +25,7 @@ public class SecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable) // désactive basic auth
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/login", "/auth/register", "/process", "/ws/**", "/game/**").permitAll()
+                        .requestMatchers("/auth/login", "/auth/register", "/process", "/random-category").permitAll() //C'est Noélie, j'ai authprisé un truc chelou
                         .requestMatchers(HttpMethod.OPTIONS, "/test","/testAdmin","/testUser").permitAll()
                         .requestMatchers( "/testAdmin").hasAuthority("ADMIN")
                         .requestMatchers( "/testUser").hasAuthority("USER")
