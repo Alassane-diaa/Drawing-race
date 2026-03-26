@@ -13,6 +13,7 @@ export default function HomePage() {
             <div>
                 <Link to="login"> <button>Se connecter</button> </Link>
                 <Link to="register"> <button>Créer un compte</button> </Link>
+                <Link to="play"> <button>Multiplayer</button> </Link>
             </div>
         </main>
         
