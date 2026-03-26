@@ -63,8 +63,8 @@ Body:
   "playerName": "alice",
   "stroke": {
     "points": [
-      { "x": 10.0, "y": 15.0 },
-      { "x": 12.0, "y": 18.0 }
+      { "x": 10.0, "y": 15.0, "pen": 1 },
+      { "x": 12.0, "y": 18.0, "pen": 1 }
     ]
   }
 }
@@ -73,6 +73,23 @@ Body:
 ### S'abonner
 - Etat de partie: `/topic/game/{gameId}/state`
 - Flux des traits: `/topic/game/{gameId}/stroke`
+- Evenements de partie: `/topic/game/{gameId}/event`
+
+Quand le joueur 2 rejoint et que la partie passe en `IN_PROGRESS`, le serveur envoie:
+```json
+{
+  "type": "PLAYER2_JOINED",
+  "gameId": "...",
+  "status": "IN_PROGRESS",
+  "joinedPlayerName": "bob",
+  "targetPlayerName": "alice",
+  "timestamp": 1710000000000
+}
+```
+
+Le frontend du joueur 1 peut filtrer avec:
+- `event.type === "PLAYER2_JOINED"`
+- `event.targetPlayerName === currentPlayerName`
 
 ## Erreurs
 Les erreurs metier renvoient HTTP 400:
@@ -82,4 +99,3 @@ Les erreurs metier renvoient HTTP 400:
   "message": "Partie introuvable: ..."
 }
 ```
-
