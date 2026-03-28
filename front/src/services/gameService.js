@@ -111,6 +111,37 @@ export const startGame = async (gameId, playerName) => {
 };
 
 /**
+ * Leave lobby as player 2
+ */
+export const leaveLobby = async (gameId, playerName) => {
+    const response = await fetch(`${API_BASE_URL}/game/${gameId}/leave`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerName })
+    });
+
+    if (!response.ok) {
+        throw new Error(await parseErrorResponse(response, 'Unable to leave lobby'));
+    }
+    return response.json();
+};
+
+/**
+ * Delete lobby as host
+ */
+export const deleteLobby = async (gameId, playerName) => {
+    const response = await fetch(`${API_BASE_URL}/game/${gameId}/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerName })
+    });
+
+    if (!response.ok) {
+        throw new Error(await parseErrorResponse(response, 'Unable to delete lobby'));
+    }
+};
+
+/**
  * Fetch current game state
  */
 export const getGameState = async (gameId) => {

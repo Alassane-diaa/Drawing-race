@@ -161,6 +161,42 @@ public class GameService {
 		return game;
 	}
 
+	public Game leaveLobby(String gameId, String playerName) {
+		String normalizedPlayerName = normalizePlayerName(playerName);
+		Game game = games.get(gameId);
+		if (game == null) {
+			throw new GameException("GAME_NOT_FOUND", "Partie introuvable: " + gameId);
+		}
+
+		if (GameStatus.STARTED.equals(game.getStatus())) {
+			throw new GameException("GAME_ALREADY_STARTED", "Impossible de quitter: la partie a deja commence");
+		}
+
+		if (!normalizedPlayerName.equals(game.getPlayer2Name())) {
+			throw new GameException("ONLY_PLAYER2_CAN_LEAVE", "Seul le joueur 2 peut quitter le lobby");
+		}
+
+		game.setPlayer2Name(null);
+		game.setPlayer2Ready(false);
+		game.setStatus(GameStatus.WAITING);
+		return game;
+	}
+
+	public Game deleteLobby(String gameId, String playerName) {
+		String normalizedPlayerName = normalizePlayerName(playerName);
+		Game game = games.get(gameId);
+		if (game == null) {
+			throw new GameException("GAME_NOT_FOUND", "Partie introuvable: " + gameId);
+		}
+
+		if (!normalizedPlayerName.equals(game.getPlayer1Name())) {
+			throw new GameException("ONLY_HOST_CAN_DELETE", "Seul l'hote peut supprimer le lobby");
+		}
+
+		games.remove(gameId);
+		return game;
+	}
+
 	private String normalizePlayerName(String playerName) {
 		if (playerName == null || playerName.isBlank()) {
 			throw new GameException("INVALID_PLAYER", "playerName est obligatoire");
