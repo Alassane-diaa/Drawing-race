@@ -12,7 +12,7 @@ export default function HomePage() {
   return (
     <div className="pageContainer">
         <header>
-            <img className="logo" src="iconeV1.png" title="une image mims a changer"/>
+            <img className="logo" src={icon} title="une image mims a changer"/>
             <h1>Welcome to the Game</h1>
         </header>
 
