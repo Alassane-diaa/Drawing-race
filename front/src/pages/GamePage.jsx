@@ -57,6 +57,7 @@ export default function GamePage() {
     // Local state
     const [gameReady, setGameReady] = useState(!multiplayer || initialGameState?.status === 'STARTED');
     const [gameState, setGameState] = useState(initialGameState);
+    const [errorMessage, setErrorMessage] = useState('');
 
     // Save multiplayer session
     useEffect(() => {
@@ -142,12 +143,14 @@ export default function GamePage() {
     }
 
     function handleGameEvent(gameEvent) {
+        setErrorMessage('');
         if (gameEvent.type === 'GAME_STARTED') {
             setGameReady(true);
         }
     }
 
     function handleGameStateChanged(state) {
+        setErrorMessage('');
         setGameState(state);
         if (state.status === 'STARTED') {
             setGameReady(true);
@@ -191,10 +194,11 @@ export default function GamePage() {
         if (!multiplayer || !gameId) return;
 
         try {
+            setErrorMessage('');
             const updatedGame = await markPlayerReady(gameId, playerName);
             setGameState(updatedGame);
         } catch (error) {
-            alert(`Failed to mark as ready: ${error.message}`);
+            setErrorMessage(`Failed to mark as ready: ${error.message}`);
         }
     }
 
@@ -202,10 +206,11 @@ export default function GamePage() {
         if (!multiplayer || !gameId) return;
 
         try {
+            setErrorMessage('');
             const updatedGame = await markPlayerNotReady(gameId, playerName);
             setGameState(updatedGame);
         } catch (error) {
-            alert(`Failed to mark as not ready: ${error.message}`);
+            setErrorMessage(`Failed to mark as not ready: ${error.message}`);
         }
     }
 
@@ -213,9 +218,10 @@ export default function GamePage() {
         if (!multiplayer || !gameId) return;
 
         try {
+            setErrorMessage('');
             await startMultiplayerGame(gameId, playerName);
         } catch (error) {
-            alert(`Cannot start game: ${error.message}`);
+            setErrorMessage(`Cannot start game: ${error.message}`);
         }
     }
 
@@ -224,6 +230,12 @@ export default function GamePage() {
     return (
         <div className="game-page">
             <h1>Quick, Draw!</h1>
+
+            {errorMessage && (
+                <div className="error-message">
+                    <p>{errorMessage}</p>
+                </div>
+            )}
 
             {/* Category Display */}
             <div className="category-display">

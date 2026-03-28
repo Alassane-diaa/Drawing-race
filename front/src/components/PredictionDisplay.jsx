@@ -12,7 +12,7 @@ export default function PredictionDisplay({ predictionData }) {
         );
     }
 
-    const { prediction, top10 } = predictionData;
+    const { prediction } = predictionData;
     const confidencePercent = (prediction.confidence * 100).toFixed(2);
 
     return (
@@ -26,20 +26,6 @@ export default function PredictionDisplay({ predictionData }) {
                     />
                 </div>
                 <p>Confidence: {confidencePercent}%</p>
-            </div>
-
-            <div className="top10-predictions">
-                <h3>Top 10 Predictions:</h3>
-                <ol>
-                    {top10.map((pred, index) => (
-                        <li key={index}>
-                            <span className="category-name">{pred.category}</span>
-                            <span className="category-confidence">
-                                {(pred.confidence * 100).toFixed(2)}%
-                            </span>
-                        </li>
-                    ))}
-                </ol>
             </div>
         </div>
     );
