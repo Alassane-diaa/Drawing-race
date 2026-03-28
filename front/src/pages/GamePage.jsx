@@ -1,8 +1,14 @@
 import { useEffect, useState, useRef } from "react";
 import { useLocation } from "react-router-dom";
+import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
+
+const WS_BASE_URL = 'http://localhost:8080/ws';
 
 export default function GamePage() {
     const canvasRef = useRef(null);
+    const canvasRefOpponent = useRef(null);
+    const stompClientRef = useRef(null);
     const [brushState, setBrushState] = useState('pen'); // 'pen' or 'eraser'
     const [brushSize, setBrushSize] = useState(5);
     const [strokeCoords, setStrokeCoords] = useState([]);
@@ -12,6 +18,9 @@ export default function GamePage() {
     const [isActive, setIsActive] = useState(false);
     // Difficulty
     const location = useLocation();
+    const multiplayer = Boolean(location.state?.multiplayer);
+    const gameId = location.state?.gameId;
+    const playerName = location.state?.playerName;
     const selectedDifficulty = location.state?.difficulty || "medium";
 
     // Selon la difficulté
@@ -28,10 +37,70 @@ export default function GamePage() {
     };
     const palierConfidence = useState(getInitialPalier())[0];
 
+    const drawStrokeOnCanvas = (canvas, points) => {
+        if (!canvas || !points || points.length === 0) {
+            return; 
+        }
+
+        const ctx = canvas.getContext('2d');
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = 'black';
+
+        const [firstPoint, ...restPoints] = points;
+        ctx.beginPath();
+        ctx.moveTo(firstPoint.x, firstPoint.y);
+
+        restPoints.forEach((point) => {
+            if (point.pen === 1) {
+                ctx.stroke();
+                ctx.closePath();
+                ctx.beginPath();
+                ctx.moveTo(point.x, point.y);
+                return;
+            }
+            ctx.lineTo(point.x, point.y);
+        });
+
+        ctx.stroke();
+        ctx.closePath();
+    };
+
 
     useEffect(() => {
         startNewGame();
     }, []);
+
+    useEffect(() => {
+        if (!multiplayer || !gameId) {
+            return;
+        }
+
+        const client = new Client({
+            webSocketFactory: () => new SockJS(WS_BASE_URL),
+            reconnectDelay: 5000,
+        });
+
+        client.onConnect = () => {
+            client.subscribe(`/topic/game/${gameId}/stroke`, (frame) => {
+                const payload = JSON.parse(frame.body);
+                if (payload.playerName === playerName) {
+                    return;
+                }
+                drawStrokeOnCanvas(canvasRefOpponent.current, payload.stroke?.points || []);
+            });
+        };
+
+        client.activate();
+        stompClientRef.current = client;
+
+        return () => {
+            if (stompClientRef.current) {
+                stompClientRef.current.deactivate();
+            }
+        };
+    }, [multiplayer, gameId, playerName]);
 
     // Compte à rebours
     useEffect(() => {
@@ -125,6 +194,18 @@ export default function GamePage() {
         // Without it, React updates insachroneously, then the last point isn't sent to the backend
         const updatedCoords = [...strokeCoords, { x, y, pen }];
         setStrokeCoords(updatedCoords);
+
+        if (multiplayer && stompClientRef.current?.connected && gameId && playerName) {
+            stompClientRef.current.publish({
+                destination: `/app/game/${gameId}/stroke`,
+                body: JSON.stringify({
+                    playerName,
+                    stroke: {
+                        points: updatedCoords,
+                    },
+                }),
+            });
+        }
         
         console.log(updatedCoords)
         const response = await fetch("http://localhost:8080/process", {
@@ -157,6 +238,11 @@ export default function GamePage() {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (canvasRefOpponent.current) {
+            const opponentCtx = canvasRefOpponent.current.getContext('2d');
+            opponentCtx.clearRect(0, 0, canvasRefOpponent.current.width, canvasRefOpponent.current.height);
+        }
     }
 
     return (
@@ -165,7 +251,7 @@ export default function GamePage() {
 
             <div className="CategoryADessiner">
                 {targetCategory ? (
-                    <h2> -> <strong> {targetCategory} </strong> {"<-"} </h2>
+                    <h2>{"->"} <strong> {targetCategory} </strong> {"<-"}</h2>
                 ) : (
                     <p>Loading...</p>
                 )}
@@ -186,13 +272,21 @@ export default function GamePage() {
                 <input type="range" value={brushSize} onChange={(e) => setBrushSize(parseInt(e.target.value))} min="1" max="50" />
             </div>
             <canvas ref={canvasRef} 
-            width="800" height="600" 
+                width="800" height="600" 
                 style={{ border: "1px solid black", backgroundColor: "white" }} 
                 onClick={onClickCanvas}
                 onMouseDown={onMouseDownCanvas}
                 onMouseMove={handleMouseMoveCanvas}
                 onMouseUp={handleMouseUpCanvas}>
+            </canvas>
+        
+            {multiplayer && (
+                <canvas ref={canvasRefOpponent} 
+                    width="400" height="300" 
+                    style={{ border: "1px solid black", backgroundColor: "white" }} >
                 </canvas>
+            )}
+            
             <div>
                 {predictionData ? (
                     <div>
