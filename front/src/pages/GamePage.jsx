@@ -1,30 +1,41 @@
-import { useEffect, useState, useRef } from "react";
-import { useLocation } from "react-router-dom";
-import { Client } from "@stomp/stompjs";
-import SockJS from "sockjs-client";
+﻿import { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 
-const WS_BASE_URL = 'http://localhost:8080/ws';
-const API_BASE_URL = 'http://localhost:8080';
-const MULTIPLAYER_SESSION_KEY = 'multiplayerSession';
+// Services
+import {
+    getGameState,
+    markPlayerReady,
+    markPlayerNotReady,
+    startGame as startMultiplayerGame
+} from '../services/gameService';
+import {
+    splitPointsIntoStrokes,
+    drawCenteredOnCanvas
+} from '../services/canvasService';
+
+// Hooks
+import { useGameWebsocket, publishStroke } from '../hooks/useGameWebsocket';
+import { useCanvasDrawing } from '../hooks/useCanvasDrawing';
+import { useGameLogic } from '../hooks/useGameLogic';
+
+// Components
+import ReadyUpUI from '../components/ReadyUpUI';
+import GameTools from '../components/GameTools';
+import PredictionDisplay from '../components/PredictionDisplay';
+
+// Constants
 const MAIN_CANVAS_WIDTH = 800;
 const MAIN_CANVAS_HEIGHT = 600;
 const OPPONENT_CANVAS_WIDTH = 400;
 const OPPONENT_CANVAS_HEIGHT = 300;
+const MULTIPLAYER_SESSION_KEY = 'multiplayerSession';
 
 export default function GamePage() {
     const canvasRef = useRef(null);
     const canvasRefOpponent = useRef(null);
-    const stompClientRef = useRef(null);
-    const currentStrokeRef = useRef([]);
     const opponentStrokesRef = useRef([]);
-    const [isDrawing, setIsDrawing] = useState(false);
-    const [brushState, setBrushState] = useState('pen'); // 'pen' or 'eraser'
-    const [brushSize, setBrushSize] = useState(5);
-    const [strokeCoords, setStrokeCoords] = useState([]);
-    const [predictionData, setPredictionData] = useState(null);
-    const [targetCategory, setTargetCategory] = useState("");
 
-    // Difficulty - get from location FIRST
+    // Location state
     const location = useLocation();
     const storedSession = (() => {
         try {
@@ -36,18 +47,18 @@ export default function GamePage() {
         }
     })();
 
+    // Game mode state
     const multiplayer = Boolean(location.state?.multiplayer ?? storedSession?.multiplayer);
     const gameId = location.state?.gameId || storedSession?.gameId;
     const playerName = location.state?.playerName || storedSession?.playerName;
-    const selectedDifficulty = location.state?.difficulty || "medium";
+    const selectedDifficulty = location.state?.difficulty || 'medium';
     const initialGameState = location.state?.gameState;
 
-    // Pour timer
-    const [isActive, setIsActive] = useState(false);
-    const [hasStartedGame, setHasStartedGame] = useState(false);
-    const [gameReady, setGameReady] = useState(false);
+    // Local state
+    const [gameReady, setGameReady] = useState(!multiplayer || initialGameState?.status === 'STARTED');
     const [gameState, setGameState] = useState(initialGameState);
 
+    // Save multiplayer session
     useEffect(() => {
         if (!multiplayer || !gameId || !playerName) {
             return;
@@ -64,25 +75,18 @@ export default function GamePage() {
         }
     }, [multiplayer, gameId, playerName]);
 
+    // Restore game state from server (only if not already provided via redirect)
     useEffect(() => {
-        if (!multiplayer || !gameId) {
-            return;
+        if (!multiplayer || !gameId || initialGameState?.status === 'STARTED') {
+            return; // Don't fetch if already in game or not multiplayer
         }
 
         let isCancelled = false;
 
         const fetchCurrentGameState = async () => {
             try {
-                const response = await fetch(`${API_BASE_URL}/game/${gameId}`);
-                if (!response.ok) {
-                    console.error(`Unable to restore game state (status ${response.status})`);
-                    return;
-                }
-
-                const state = await response.json();
-                if (isCancelled) {
-                    return;
-                }
+                const state = await getGameState(gameId);
+                if (isCancelled) return;
 
                 setGameState(state);
                 if (state.status === 'STARTED') {
@@ -100,567 +104,210 @@ export default function GamePage() {
         };
     }, [multiplayer, gameId]);
 
-    // Selon la difficulté
-    const getInitialTime = () => {
-        if (selectedDifficulty === "easy") return 20;
-        if (selectedDifficulty === "hard") return 10;
-        return 15;
-    };
-    const [timeLeft, setTimeLeft] = useState(getInitialTime());
-    const getInitialPalier = () => {
-        if (selectedDifficulty === "easy") return 0.8;
-        if (selectedDifficulty === "hard") return 0.99;
-        return 0.9;
-    };
-    const palierConfidence = useState(getInitialPalier())[0];
+    // Game logic hook
+    const gameLogic = useGameLogic(selectedDifficulty, handleTimeUp, handleVictory);
 
-    const clearOpponentCanvas = () => {
-        const canvas = canvasRefOpponent.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-    };
+    // Canvas drawing hook
+    const drawingControl = useCanvasDrawing(
+        canvasRef,
+        handleStrokeComplete,
+        handleCanvasClear
+    );
 
-    const splitPointsIntoStrokes = (points) => {
-        const strokes = [];
-        let currentStroke = [];
+    // WebSocket hook for game updates
+    const { clientRef: stompClientRef } = useGameWebsocket({
+        gameId,
+        playerName,
+        enabled: multiplayer && gameId && playerName,
+        onStrokeReceived: handleOpponentStroke,
+        onGameEvent: handleGameEvent,
+        onGameStateChanged: handleGameStateChanged
+    });
 
-        points.forEach((point) => {
-            if (!Number.isFinite(point?.x) || !Number.isFinite(point?.y)) {
-                return;
-            }
+    // ============ Event Handlers ============
 
-            currentStroke.push(point);
+    function handleOpponentStroke(payload) {
+        const incomingPoints = payload.stroke?.points || [];
 
-            if (point.pen === 1) {
-                if (currentStroke.length > 0) {
-                    strokes.push(currentStroke);
-                }
-                currentStroke = [];
-            }
-        });
-
-        if (currentStroke.length > 0) {
-            strokes.push(currentStroke);
-        }
-
-        return strokes;
-    };
-
-    const drawCenteredOnOpponentCanvas = (strokes) => {
-        const canvas = canvasRefOpponent.current;
-        if (!canvas || !strokes || strokes.length === 0) {
-            clearOpponentCanvas();
-            return; 
-        }
-
-        const validPoints = strokes.flat().filter(
-            (point) => Number.isFinite(point?.x) && Number.isFinite(point?.y)
-        );
-
-        if (validPoints.length === 0) {
-            clearOpponentCanvas();
+        if (incomingPoints.length === 0) {
+            opponentStrokesRef.current = [];
+            drawCenteredOnCanvas(canvasRefOpponent.current, []);
             return;
         }
 
-        const minX = Math.min(...validPoints.map((point) => point.x));
-        const maxX = Math.max(...validPoints.map((point) => point.x));
-        const minY = Math.min(...validPoints.map((point) => point.y));
-        const maxY = Math.max(...validPoints.map((point) => point.y));
+        const incomingStrokes = splitPointsIntoStrokes(incomingPoints);
 
-        const drawingWidth = Math.max(maxX - minX, 1);
-        const drawingHeight = Math.max(maxY - minY, 1);
-        const fitScale = Math.min(
-            (canvas.width * 0.9) / drawingWidth,
-            (canvas.height * 0.9) / drawingHeight
-        );
-        const scale = Math.max(0.1, fitScale);
+        opponentStrokesRef.current = [...opponentStrokesRef.current, ...incomingStrokes];
+        drawCenteredOnCanvas(canvasRefOpponent.current, opponentStrokesRef.current);
+    }
 
-        const centerX = (minX + maxX) / 2;
-        const centerY = (minY + maxY) / 2;
-
-        const transformPoint = (point) => ({
-            x: (point.x - centerX) * scale + canvas.width / 2,
-            y: (point.y - centerY) * scale + canvas.height / 2,
-            pen: point.pen,
-        });
-
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = 'black';
-
-        strokes.forEach((stroke) => {
-            const transformedStroke = stroke
-                .filter((point) => Number.isFinite(point?.x) && Number.isFinite(point?.y))
-                .map(transformPoint);
-
-            if (transformedStroke.length === 0) {
-                return;
-            }
-
-            if (transformedStroke.length === 1) {
-                const point = transformedStroke[0];
-                ctx.beginPath();
-                ctx.arc(point.x, point.y, 2, 0, 2 * Math.PI);
-                ctx.fillStyle = 'black';
-                ctx.fill();
-                ctx.closePath();
-                return;
-            }
-
-            ctx.beginPath();
-            ctx.moveTo(transformedStroke[0].x, transformedStroke[0].y);
-            for (let index = 1; index < transformedStroke.length; index += 1) {
-                const point = transformedStroke[index];
-                ctx.lineTo(point.x, point.y);
-            }
-            ctx.stroke();
-            ctx.closePath();
-        });
-    };
-
-    useEffect(() => {
-        // En solo, toujours prêt; en multijoueur, attendre GAME_STARTED
-        if (!multiplayer) {
+    function handleGameEvent(gameEvent) {
+        if (gameEvent.type === 'GAME_STARTED') {
             setGameReady(true);
         }
-    }, [multiplayer]);
+    }
 
-    useEffect(() => {
-        if (!multiplayer || !gameId) {
-            return;
+    function handleGameStateChanged(state) {
+        setGameState(state);
+        if (state.status === 'STARTED') {
+            setGameReady(true);
+        }
+    }
+
+    async function handleStrokeComplete(finishedStroke, updatedCoords) {
+        const activeClient = stompClientRef.current;
+
+        // Publish to multiplayer
+        if (multiplayer && gameId && playerName && activeClient?.connected) {
+            publishStroke(activeClient, gameId, playerName, finishedStroke);
         }
 
-        const client = new Client({
-            webSocketFactory: () => new SockJS(WS_BASE_URL),
-            reconnectDelay: 5000,
-        });
+        // Get AI prediction
+        await gameLogic.fetchAndProcessDrawing(updatedCoords);
+    }
 
-        client.onConnect = () => {
-            client.subscribe(`/topic/game/${gameId}/stroke`, (frame) => {
-                const payload = JSON.parse(frame.body);
-                if (payload.playerName === playerName) {
-                    return;
-                }
+    function handleCanvasClear() {
+        const activeClient = stompClientRef.current;
 
-                const incomingPoints = payload.stroke?.points || [];
-                if (incomingPoints.length === 0) {
-                    opponentStrokesRef.current = [];
-                    clearOpponentCanvas();
-                    return;
-                }
-
-                const incomingStrokes = splitPointsIntoStrokes(incomingPoints);
-                opponentStrokesRef.current = [...opponentStrokesRef.current, ...incomingStrokes];
-                drawCenteredOnOpponentCanvas(opponentStrokesRef.current);
-            });
-
-            client.subscribe(`/topic/game/${gameId}/event`, (frame) => {
-                const gameEvent = JSON.parse(frame.body);
-                if (gameEvent.type === 'GAME_STARTED') {
-                    setGameReady(true);
-                }
-            });
-
-            client.subscribe(`/topic/game/${gameId}/state`, (frame) => {
-                const state = JSON.parse(frame.body);
-                setGameState(state);
-                if (state.status === 'STARTED') {
-                    setGameReady(true);
-                }
-            });
-        };
-
-        client.activate();
-        stompClientRef.current = client;
-
-        return () => {
-            if (stompClientRef.current) {
-                stompClientRef.current.deactivate();
-            }
-        };
-    }, [multiplayer, gameId, playerName]);
-
-    // Compte à rebours
-    useEffect(() => {
-        let interval = null;
-        if (isActive && timeLeft > 0) {
-            interval = setInterval(() => {
-                setTimeLeft((time) => time - 1);
-            }, 1000);
-        } else if (timeLeft === 0) {
-            setIsActive(false);
-            clearInterval(interval);
-            handleTimeUp();
+        // Publish clear event to multiplayer
+        if (multiplayer && gameId && playerName && activeClient?.connected) {
+            publishStroke(activeClient, gameId, playerName, []);
         }
-        return () => clearInterval(interval);
-    }, [isActive, timeLeft]);
+    }
 
-    const startNewGame = async () => {
-        if (multiplayer && !gameReady) {
-            alert('Waiting for the game to start...');
-            return;
-        }
+    function handleTimeUp(category) {
+        alert(`Time'\''s Up! You had to draw: ${category}`);
+        gameLogic.resetGame();
+    }
 
-        setHasStartedGame(true);
-        await fetchRandomCategory();
-        setTimeLeft(getInitialTime())
-        setIsActive(true);
-        clearCanvas();
-    };
+    function handleVictory(category, confidence) {
+        alert(`Congratulations! The AI recognized your drawing: ${category} (${(confidence * 100).toFixed(2)}%)`);
+        gameLogic.resetGame();
+    }
 
-    const markAsReady = async () => {
-        if (!multiplayer || !gameId) {
-            console.warn('Mark ready: Missing multiplayer or gameId');
-            return;
-        }
+    // ============ Multiplayer Handlers ============
+
+    async function handleMarkReady() {
+        if (!multiplayer || !gameId) return;
 
         try {
-            console.log(`Marking ${playerName} as ready in game ${gameId}`);
-            const response = await fetch(`http://localhost:8080/game/${gameId}/ready`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ playerName })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                const errorMsg = errorData.message || `Server error: ${response.status}`;
-                console.error('Mark ready failed:', errorMsg);
-                alert(`Failed to mark as ready: ${errorMsg}`);
-                return;
-            }
-
-            const updatedGame = await response.json();
-            console.log('Mark ready successful:', updatedGame);
+            const updatedGame = await markPlayerReady(gameId, playerName);
             setGameState(updatedGame);
         } catch (error) {
-            console.error('Error marking as ready:', error);
-            alert(`Network error: ${error.message}`);
+            alert(`Failed to mark as ready: ${error.message}`);
         }
-    };
+    }
 
-    const markAsNotReady = async () => {
-        if (!multiplayer || !gameId) {
-            console.warn('Mark not ready: Missing multiplayer or gameId');
-            return;
-        }
+    async function handleMarkNotReady() {
+        if (!multiplayer || !gameId) return;
 
         try {
-            console.log(`Marking ${playerName} as not ready in game ${gameId}`);
-            const response = await fetch(`http://localhost:8080/game/${gameId}/unready`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ playerName })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                const errorMsg = errorData.message || `Server error: ${response.status}`;
-                console.error('Mark not ready failed:', errorMsg);
-                alert(`Failed to mark as not ready: ${errorMsg}`);
-                return;
-            }
-
-            const updatedGame = await response.json();
-            console.log('Mark not ready successful:', updatedGame);
+            const updatedGame = await markPlayerNotReady(gameId, playerName);
             setGameState(updatedGame);
         } catch (error) {
-            console.error('Error marking as not ready:', error);
-            alert(`Network error: ${error.message}`);
+            alert(`Failed to mark as not ready: ${error.message}`);
         }
-    };
+    }
 
-    const startMultiplayerGame = async () => {
-        if (!multiplayer || !gameId) {
-            console.warn('Start game: Missing multiplayer or gameId');
-            return;
-        }
-        
-        if (playerName !== gameState?.player1Name) {
-            console.error(`Start game: Only Player 1 can start. Current player: ${playerName}, Player 1: ${gameState?.player1Name}`);
-            alert('Only Player 1 can start the game!');
-            return;
-        }
-
-        if (!gameState?.player1Ready || !gameState?.player2Ready) {
-            console.error(`Start game: Players not ready. P1 Ready: ${gameState?.player1Ready}, P2 Ready: ${gameState?.player2Ready}`);
-            alert('Both players must be ready before starting!');
-            return;
-        }
+    async function handleStartGame() {
+        if (!multiplayer || !gameId) return;
 
         try {
-            console.log(`Starting game ${gameId} as ${playerName}`);
-            const response = await fetch(`http://localhost:8080/game/${gameId}/start`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ playerName })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                const errorMsg = errorData.message || `Server error: ${response.status}`;
-                console.error('Start game failed:', errorMsg);
-                alert(`Cannot start game: ${errorMsg}`);
-                return;
-            }
-            
-            console.log('Start game request sent successfully, waiting for GAME_STARTED event...');
+            await startMultiplayerGame(gameId, playerName);
         } catch (error) {
-            console.error('Error starting game:', error);
-            alert(`Network error: ${error.message}`);
-        }
-    };
-
-    const handleTimeUp = () => {
-        alert(`Time's Up ! You had to draw: ${targetCategory}`);
-        // Enlever les alerts et afficher la page suivante
-        //
-        //
-    };
-    // Gestion Victoire
-    useEffect(() => {
-        if (hasStartedGame && predictionData && predictionData.prediction.category === targetCategory && predictionData.prediction.confidence >= palierConfidence) {
-            setIsActive(false); // Stop le timer
-            alert("Congratulations! The AI recognized your drawing!");
-            // Enlever les alertes euh et lier tot ça à la difficulté
-        }
-    }, [hasStartedGame, predictionData, targetCategory, palierConfidence]);
-
-    const fetchRandomCategory = async () => {
-        try {
-            const response = await fetch("http://localhost:8080/random-category");
-            const data = await response.json();
-            setTargetCategory(data.category);
-        } catch (error) {
-            console.error("Erreur lors du chargement de la catégorie :", error);
-        }
-    };
-
-    const onMouseDownCanvas = (event) => {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        const rect = canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-        const pen = 0;
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
-
-        ctx.lineWidth = brushSize;
-        ctx.strokeStyle = brushState === 'pen' ? 'black' : 'white';
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        setIsDrawing(true);
-        currentStrokeRef.current = [{ x, y, pen }];
-    }
-
-    const handleMouseMoveCanvas = (event) => {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        if (!isDrawing) return;
-        if (event.buttons === 1) { // Left mouse button
-            const rect = canvas.getBoundingClientRect();
-            const x = event.clientX - rect.left;
-            const y = event.clientY - rect.top;
-            const pen = 0;
-            ctx.lineTo(x, y);
-            ctx.stroke();
-            currentStrokeRef.current.push({ x, y, pen });
+            alert(`Cannot start game: ${error.message}`);
         }
     }
 
-    const handleMouseUpCanvas = async (event) => {
-        if (!isDrawing) return;
-        setIsDrawing(false);
-
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        ctx.closePath();
-        const rect = canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-        const pen = 1;
-
-        const finishedStroke = [...currentStrokeRef.current, { x, y, pen }];
-        currentStrokeRef.current = [];
-
-        const updatedCoords = [...strokeCoords, ...finishedStroke];
-        setStrokeCoords(updatedCoords);
-
-        if (multiplayer && stompClientRef.current?.connected && gameId && playerName) {
-            stompClientRef.current.publish({
-                destination: `/app/game/${gameId}/stroke`,
-                body: JSON.stringify({
-                    playerName,
-                    stroke: {
-                        points: finishedStroke,
-                    },
-                }),
-            });
-        }
-
-        const response = await fetch("http://localhost:8080/process", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                points: updatedCoords
-            })
-        });
-        const data = await response.json();
-        setPredictionData(data);
-    }
-
-    const onClickCanvas = (event) => {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        const rect = canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top; 
-        ctx.fillStyle = brushState === 'pen' ? 'black' : 'white';
-        ctx.beginPath();
-        ctx.arc(x, y, 3, 0, 2 * Math.PI);
-        ctx.fill();
-
-        const clickPoint = { x, y, pen: 1 };
-        const updatedCoords = [...strokeCoords, clickPoint];
-        setStrokeCoords(updatedCoords);
-
-        if (multiplayer && stompClientRef.current?.connected && gameId && playerName) {
-            stompClientRef.current.publish({
-                destination: `/app/game/${gameId}/stroke`,
-                body: JSON.stringify({
-                    playerName,
-                    stroke: {
-                        points: [clickPoint],
-                    },
-                }),
-            });
-        }
-    }
-
-    const clearCanvas = async () => {
-        setStrokeCoords([]);
-        currentStrokeRef.current = [];
-        setIsDrawing(false);
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        if (multiplayer && stompClientRef.current?.connected && gameId && playerName) {
-            stompClientRef.current.publish({
-                destination: `/app/game/${gameId}/stroke`,
-                body: JSON.stringify({
-                    playerName,
-                    stroke: {
-                        points: [],
-                    },
-                }),
-            });
-        }
-    }
+    // ============ Render ============
 
     return (
-        <div className="game">
-            <h1>Quick, Draw:</h1>
+        <div className="game-page">
+            <h1>Quick, Draw!</h1>
 
-            <div className="CategoryADessiner">
-                {hasStartedGame && targetCategory ? (
-                    <h2>{"->"} <strong> {targetCategory} </strong> {"<-"}</h2>
+            {/* Category Display */}
+            <div className="category-display">
+                {gameLogic.hasStartedGame && gameLogic.targetCategory ? (
+                    <h2>
+                        {'->'} <strong>{gameLogic.targetCategory}</strong> {'<-'}
+                    </h2>
                 ) : multiplayer && !gameReady ? (
                     <p>Waiting for the game to start...</p>
                 ) : (
-                    <p>Clique sur "Commencer la partie" </p>
+                    <p>Click on "Commencer la partie" to start</p>
                 )}
             </div>
 
+            {/* Multiplayer Ready-Up Interface */}
             {multiplayer && gameState && !gameReady && (
-                <div>
-                    <h3>Ready Up! (Game: {gameState.status})</h3>
-                    <p>
-                        Player 1: {gameState.player1Name} 
-                        {gameState.player1Ready ? ' ✓ Ready' : ' ⏳ Not Ready'}
-                        {playerName === gameState.player1Name && ' (You)'}
-                    </p>
-                    <p>
-                        Player 2: {gameState.player2Name || 'Waiting for join...'} 
-                        {gameState.player2Name ? (gameState.player2Ready ? ' ✓ Ready' : ' ⏳ Not Ready') : ''}
-                        {playerName === gameState.player2Name && ' (You)'}
-                    </p>
-                    {playerName === gameState.player2Name && (
-                        gameState.player2Ready ? (
-                            <button onClick={markAsNotReady}>Mark as Not Ready</button>
-                        ) : (
-                            <button onClick={markAsReady}>Mark as Ready</button>
-                        )
-                    )}
-                    {playerName === gameState.player1Name && gameState.player1Ready && gameState.player2Ready && gameState.player2Name && (
-                        <button onClick={startMultiplayerGame}>Start Game</button>
-                    )}
-                </div>
+                <ReadyUpUI
+                    gameState={gameState}
+                    playerName={playerName}
+                    onMarkReady={handleMarkReady}
+                    onMarkNotReady={handleMarkNotReady}
+                    onStartGame={handleStartGame}
+                />
             )}
 
-            <div>
-                {hasStartedGame ? `00:${timeLeft < 10 ? `0${timeLeft}` : timeLeft}` : '--:--'}
+            {/* Timer */}
+            <div className="timer-display">
+                {gameLogic.hasStartedGame
+                    ? `00:${
+                          gameLogic.timeLeft < 10
+                              ? `0${gameLogic.timeLeft}`
+                              : gameLogic.timeLeft
+                      }`
+                    : '--:--'}
             </div>
 
-            <div>
-                <button className="grosBouton" onClick={startNewGame} disabled={multiplayer && !gameReady}>Commencer la partie</button>
+            {/* Start Game Button */}
+            <div className="button-group">
+                <button
+                    className="btn-start-game"
+                    onClick={gameLogic.startNewGame}
+                    disabled={multiplayer && !gameReady}
+                >
+                    Commencer la partie
+                </button>
             </div>
 
-            <div>
-                <button className = "Tool" onClick={() => setBrushState('pen')}>Pen</button>
-                <button className = "Tool" onClick={() => setBrushState('eraser')}>Eraser</button>
-                <button className = "Tool" onClick={clearCanvas}>Clear</button>
-                <input type="range" value={brushSize} onChange={(e) => setBrushSize(parseInt(e.target.value))} min="1" max="50" />
-            </div>
-            <canvas ref={canvasRef} 
-                width={MAIN_CANVAS_WIDTH} height={MAIN_CANVAS_HEIGHT}
-                style={{ border: "1px solid black", backgroundColor: "white" }} 
-                onClick={onClickCanvas}
-                onMouseDown={onMouseDownCanvas}
-                onMouseMove={handleMouseMoveCanvas}
-                onMouseUp={handleMouseUpCanvas}>
-            </canvas>
-        
+            {/* Drawing Tools */}
+            <GameTools
+                brushState={drawingControl.brushState}
+                brushSize={drawingControl.brushSize}
+                onBrushStateChange={drawingControl.setBrushState}
+                onBrushSizeChange={drawingControl.setBrushSize}
+                onClear={drawingControl.clearCanvas}
+            />
+
+            {/* Main Canvas */}
+            <canvas
+                ref={canvasRef}
+                width={MAIN_CANVAS_WIDTH}
+                height={MAIN_CANVAS_HEIGHT}
+                style={{ border: '1px solid black', backgroundColor: 'white' }}
+                onClick={drawingControl.onClickCanvas}
+                onMouseDown={drawingControl.onMouseDownCanvas}
+                onMouseMove={drawingControl.handleMouseMoveCanvas}
+                onMouseUp={drawingControl.handleMouseUpCanvas}
+            />
+
+            {/* Opponent Canvas (Multiplayer) */}
             {multiplayer && (
-                <canvas ref={canvasRefOpponent} 
-                    width={OPPONENT_CANVAS_WIDTH} height={OPPONENT_CANVAS_HEIGHT}
-                    style={{ border: "1px solid black", backgroundColor: "white", pointerEvents: "none" }} >
-                </canvas>
+                <canvas
+                    ref={canvasRefOpponent}
+                    width={OPPONENT_CANVAS_WIDTH}
+                    height={OPPONENT_CANVAS_HEIGHT}
+                    style={{
+                        border: '1px solid black',
+                        backgroundColor: 'white',
+                        pointerEvents: 'none'
+                    }}
+                />
             )}
-            
-            <div>
-                {predictionData ? (
-                    <div>
-                        <h2>Top Prediction: {predictionData.prediction.category}</h2>
-                        <p>Confidence: {(predictionData.prediction.confidence * 100).toFixed(2)}%</p>
-                        <h3>Top 10 Predictions:</h3>
-                        <ol>
-                            {predictionData.top10.map((pred, index) => (
-                                <li key={index}>
-                                    {pred.category} - {(pred.confidence * 100).toFixed(2)}%
-                                </li>
-                            ))}
-                        </ol>
-                    </div>
-                ) : (
-                    <p>Draw something to get predictions!</p>
-                )}
-            </div>
-        
+
+            {/* Prediction Display */}
+            <PredictionDisplay predictionData={gameLogic.predictionData} />
         </div>
-    )
+    );
 }

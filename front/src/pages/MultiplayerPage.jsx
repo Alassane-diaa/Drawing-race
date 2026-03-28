@@ -1,128 +1,174 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-    import { Client } from "@stomp/stompjs";
-import SockJS from "sockjs-client";
+﻿import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
-const API_BASE_URL = 'http://localhost:8080';
-const WS_BASE_URL = 'http://localhost:8080/ws';
+// Services
+import {
+    createGame,
+    joinGame,
+    joinRandomGame,
+    markPlayerReady
+} from '../services/gameService';
+
+// Hooks
+import { useLobbyWebsocket } from '../hooks/useGameWebsocket';
+
+// Components
+import LobbyGameCard from '../components/LobbyGameCard';
+
 const MULTIPLAYER_SESSION_KEY = 'multiplayerSession';
-
-const parseErrorResponse = async (response, fallbackMessage) => {
-    try {
-        const data = await response.json();
-        return data.message || fallbackMessage;
-    } catch {
-        return fallbackMessage;
-    }
-};
-
-const createGame = async (userName) => {
-    const response = await fetch(`${API_BASE_URL}/game/create`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ playerName: userName })
-    });
-
-    if (!response.ok) {
-        throw new Error(await parseErrorResponse(response, 'Unable to create game'));
-    }
-
-    return response.json();
-};
-
-const joinGame = async (gameId, userName) => {
-    const response = await fetch(`${API_BASE_URL}/game/connect`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ gameId, playerName: userName })
-    });
-
-    if (!response.ok) {
-        throw new Error(await parseErrorResponse(response, 'Unable to join game'));
-    }
-
-    return response.json();
-};
-
-const joinRandomGame = async (userName) => {
-    const response = await fetch(`${API_BASE_URL}/game/connect/random`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ playerName: userName })
-    });
-
-    if (!response.ok) {
-        throw new Error(await parseErrorResponse(response, 'Unable to join random game'));
-    }
-
-    return response.json();
-};
-
-const markPlayerReady = async (gameId, userName) => {
-    const response = await fetch(`${API_BASE_URL}/game/${gameId}/ready`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ playerName: userName })
-    });
-
-    if (!response.ok) {
-        throw new Error(await parseErrorResponse(response, 'Unable to mark as ready'));
-    }
-
-    return response.json();
-};
-
-const startGame = async (gameId, userName) => {
-    const response = await fetch(`${API_BASE_URL}/game/${gameId}/start`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ playerName: userName })
-    });
-
-    if (!response.ok) {
-        throw new Error(await parseErrorResponse(response, 'Unable to start game'));
-    }
-
-    return response.json();
-};
 
 export default function MultiplayerPage() {
     const { user, isUser } = useAuth();
     const navigate = useNavigate();
+
     const [game, setGame] = useState(null);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
-    const refInput = useRef(null);
-    const stompClientRef = useRef(null);
+    const [gameIdInput, setGameIdInput] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
+    // Update welcome message when user changes
     useEffect(() => {
         if (!isUser) {
-            setMessage('Login first');
+            setMessage('Please login first');
         } else {
-            setMessage('Welcome ' + user.username);
+            setMessage(`Welcome, ${user.username}!`);
         }
     }, [isUser, user]);
 
-    useEffect(() => {
-        return () => {
-            if (stompClientRef.current) {
-                stompClientRef.current.deactivate();
-            }
-        };
-    }, []);
+    // WebSocket for lobby updates
+    useLobbyWebsocket({
+        gameId: game?.gameId,
+        playerName: user?.username,
+        enabled: !!game && isUser,
+        onStateChanged: handleGameStateChanged,
+        onEvent: handleGameEvent,
+        onError: (errorMsg) => setError(errorMsg)
+    });
 
-    const redirectToGame = (currentGame) => {
+    // ============ Event Handlers ============
+
+    function handleGameStateChanged(gameState) {
+        setGame(gameState);
+
+        // Auto-redirect when game starts
+        if (gameState.status === 'STARTED') {
+            redirectToGame(gameState);
+        }
+    }
+
+    function handleGameEvent(gameEvent) {
+        if (gameEvent.type === 'PLAYER2_JOINED') {
+            const updatedGame = {
+                ...game,
+                player2Name: gameEvent.joinedPlayerName
+            };
+            setGame(updatedGame);
+            // Player 1 (host) redirects immediately when Player 2 joins
+            if (user?.username === game.player1Name) {
+                redirectToGame(updatedGame);
+            }
+        }
+
+        if (gameEvent.type === 'PLAYER_READY') {
+            setGame(prev => ({
+                ...prev,
+                player1Ready: gameEvent.joinedPlayerName === prev.player1Name ? true : prev.player1Ready,
+                player2Ready: gameEvent.joinedPlayerName === prev.player2Name ? true : prev.player2Ready,
+            }));
+        }
+
+        if (gameEvent.type === 'GAME_STARTED') {
+            // Ensure we have the latest game state for redirect
+            handleGameStateChanged(game);
+        }
+    }
+
+    // ============ Game Actions ============
+
+    async function handleCreateGame() {
+        if (!isUser) {
+            setError('Please login first');
+            return;
+        }
+
+        try {
+            setError('');
+            setIsLoading(true);
+            const createdGame = await createGame(user.username);
+            setGame(createdGame);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
+    async function handleJoinGame() {
+        if (!isUser) {
+            setError('Please login first');
+            return;
+        }
+
+        if (!gameIdInput.trim()) {
+            setError('Please enter a game ID');
+            return;
+        }
+
+        try {
+            setError('');
+            setIsLoading(true);
+            const joinedGame = await joinGame(gameIdInput, user.username);
+            setGame(joinedGame);
+
+            if (joinedGame.status === 'IN_PROGRESS') {
+                redirectToGame(joinedGame);
+            }
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
+    async function handleJoinRandomGame() {
+        if (!isUser) {
+            setError('Please login first');
+            return;
+        }
+
+        try {
+            setError('');
+            setIsLoading(true);
+            const joinedGame = await joinRandomGame(user.username);
+            setGame(joinedGame);
+
+            if (joinedGame.status === 'IN_PROGRESS') {
+                redirectToGame(joinedGame);
+            }
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
+    async function handleMarkReady() {
+        if (!game) return;
+
+        try {
+            setError('');
+            const updatedGame = await markPlayerReady(game.gameId, user.username);
+            setGame(updatedGame);
+        } catch (err) {
+            setError(err.message);
+        }
+    }
+
+    // ============ Navigation ============
+
+    function redirectToGame(currentGame) {
         try {
             localStorage.setItem(MULTIPLAYER_SESSION_KEY, JSON.stringify({
                 gameId: currentGame.gameId,
@@ -141,165 +187,73 @@ export default function MultiplayerPage() {
                 gameState: currentGame,
             },
         });
-    };
+    }
 
-    const connectLobbySocket = (currentGame) => {
-        if (stompClientRef.current) {
-            stompClientRef.current.deactivate();
-        }
-
-        const client = new Client({
-            webSocketFactory: () => new SockJS(WS_BASE_URL),
-            reconnectDelay: 5000,
-        });
-
-        client.onConnect = () => {
-            client.subscribe(`/topic/game/${currentGame.gameId}/state`, (frame) => {
-                const gameState = JSON.parse(frame.body);
-                setGame(gameState);
-                if (gameState.status === 'STARTED') {
-                    redirectToGame(gameState);
-                }
-            });
-
-            client.subscribe(`/topic/game/${currentGame.gameId}/event`, (frame) => {
-                const gameEvent = JSON.parse(frame.body);
-                if (
-                    gameEvent.type === 'PLAYER2_JOINED' &&
-                    gameEvent.targetPlayerName === user.username
-                ) {
-                    setGame(prev => ({ ...prev, player2Name: gameEvent.joinedPlayerName }));
-                }
-                if (gameEvent.type === 'PLAYER_READY') {
-                    // Mettre à jour l'état de préparation
-                    setGame(prev => ({
-                        ...prev,
-                        player1Ready: gameEvent.joinedPlayerName === prev.player1Name ? true : prev.player1Ready,
-                        player2Ready: gameEvent.joinedPlayerName === prev.player2Name ? true : prev.player2Ready,
-                    }));
-                }
-                if (gameEvent.type === 'GAME_STARTED') {
-                    redirectToGame(currentGame);
-                }
-            });
-        };
-
-        client.onStompError = (frame) => {
-            setError(frame.headers.message || 'WebSocket error');
-        };
-
-        client.activate();
-        stompClientRef.current = client;
-    };
-
-    const handleCreateGame = async () => {
-        if (!isUser) {
-            setError('Login first');
-            return;
-        }
-
-        try {
-            setError('');
-            const createdGame = await createGame(user.username);
-            setGame(createdGame);
-            connectLobbySocket(createdGame);
-        } catch (creationError) {
-            setError(creationError.message);
-        }
-    };
-
-    const handleJoinGame = async () => {
-        if (!isUser) {
-            setError('Login first');
-            return;
-        }
-
-        const gameId = refInput.current?.value?.trim();
-        if (!gameId) {
-            setError('Please enter a game ID');
-            return;
-        }
-
-        try {
-            setError('');
-            const joinedGame = await joinGame(gameId, user.username);
-            setGame(joinedGame);
-            connectLobbySocket(joinedGame);
-            if (joinedGame.status === 'IN_PROGRESS') {
-                redirectToGame(joinedGame);
-            }
-        } catch (joinError) {
-            setError(joinError.message);
-        }
-    };
-
-    const handleJoinRandomGame = async () => {
-        if (!isUser) {
-            setError('Login first');
-            return;
-        }
-
-        try {
-            setError('');
-            const joinedGame = await joinRandomGame(user.username);
-            setGame(joinedGame);
-            connectLobbySocket(joinedGame);
-            if (joinedGame.status === 'IN_PROGRESS') {
-                redirectToGame(joinedGame);
-            }
-        } catch (joinError) {
-            setError(joinError.message);
-        }
-    };
-
-    const handleMarkReady = async () => {
-        if (!game) return;
-
-        try {
-            setError('');
-            const updatedGame = await markPlayerReady(game.gameId, user.username);
-            setGame(updatedGame);
-        } catch (error) {
-            setError(error.message);
-        }
-    };
-
-    const handleStartGame = async () => {
-        if (!game) return;
-
-        try {
-            setError('');
-            await startGame(game.gameId, user.username);
-        } catch (error) {
-            setError(error.message);
-        }
-    };
-
-    useEffect(() => {
-        if (game) {
-            if (game.status === 'IN_PROGRESS') {
-                redirectToGame(game);
-            }
-        }
-
-    }, [game]);
+    // ============ Render ============
 
     return (
-        <>
-        <div>{message}</div>
-        <div>
-            <button onClick={handleCreateGame}>Create Game</button>
-            <input type="text" placeholder="Game ID" ref={refInput}/>
-            <button onClick={handleJoinGame}>Join Game</button>
-            <button onClick={handleJoinRandomGame}>Join Random</button>
-        </div>
-        {game && (
-            <div>
-                <div>Game ID: {game.gameId}</div>
-                <div>Status: {game.status}</div>
+        <div className="multiplayer-page">
+            <div className="welcome-section">
+                <p className="message">{message}</p>
             </div>
-        )}
-        {error && <div>{error}</div>}
-        </>
-    )
+
+            {/* Game Actions */}
+            <div className="game-actions-section">
+                <h2>Join or Create a Game</h2>
+                
+                <div className="action-buttons">
+                    <button
+                        onClick={handleCreateGame}
+                        disabled={!isUser || isLoading}
+                        className="btn-create"
+                    >
+                        {isLoading ? 'Creating...' : 'Create Game'}
+                    </button>
+
+                    <button
+                        onClick={handleJoinRandomGame}
+                        disabled={!isUser || isLoading}
+                        className="btn-join-random"
+                    >
+                        {isLoading ? 'Joining...' : 'Join Random Game'}
+                    </button>
+                </div>
+
+                <div className="join-specific-game">
+                    <input
+                        type="text"
+                        placeholder="Enter Game ID"
+                        value={gameIdInput}
+                        onChange={(e) => setGameIdInput(e.target.value)}
+                        disabled={isLoading}
+                        className="game-id-input"
+                    />
+                    <button
+                        onClick={handleJoinGame}
+                        disabled={!isUser || !gameIdInput.trim() || isLoading}
+                        className="btn-join"
+                    >
+                        {isLoading ? 'Joining...' : 'Join Game'}
+                    </button>
+                </div>
+            </div>
+
+            {/* Game Card */}
+            {game && (
+                <LobbyGameCard
+                    game={game}
+                    playerName={user.username}
+                    onMarkReady={handleMarkReady}
+                    onStartGame={() => {}}
+                />
+            )}
+
+            {/* Error Display */}
+            {error && (
+                <div className="error-message">
+                    <p>{error}</p>
+                </div>
+            )}
+        </div>
+    );
 }
