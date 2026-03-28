@@ -49,6 +49,52 @@ public class MultiplayerController {
         return ResponseEntity.ok(gameView);
     }
 
+    @PostMapping("/{gameId}/ready")
+    public ResponseEntity<GameView> markReady(@PathVariable String gameId, @RequestBody CreateGameRequest request) {
+        log.info("mark ready request: gameId={}, playerName={}", gameId, request.getPlayerName());
+        Game game = gameService.markPlayerReady(gameId, request.getPlayerName());
+        GameView gameView = GameView.from(game);
+
+        simpMessagingTemplate.convertAndSend("/topic/game/" + gameId + "/state", gameView);
+        GameEvent readyEvent = GameEvent.playerReady(gameId, request.getPlayerName());
+        simpMessagingTemplate.convertAndSend("/topic/game/" + gameId + "/event", readyEvent);
+
+        return ResponseEntity.ok(gameView);
+    }
+
+    @PostMapping("/{gameId}/unready")
+    public ResponseEntity<GameView> markNotReady(@PathVariable String gameId, @RequestBody CreateGameRequest request) {
+        log.info("mark not ready request: gameId={}, playerName={}", gameId, request.getPlayerName());
+        Game game = gameService.markPlayerNotReady(gameId, request.getPlayerName());
+        GameView gameView = GameView.from(game);
+
+        simpMessagingTemplate.convertAndSend("/topic/game/" + gameId + "/state", gameView);
+        GameEvent readyEvent = GameEvent.playerReady(gameId, request.getPlayerName());
+        simpMessagingTemplate.convertAndSend("/topic/game/" + gameId + "/event", readyEvent);
+
+        return ResponseEntity.ok(gameView);
+    }
+
+    @GetMapping("/{gameId}")
+    public ResponseEntity<GameView> getGame(@PathVariable String gameId) {
+        log.info("get game request: gameId={}", gameId);
+        Game game = gameService.getGameById(gameId);
+        return ResponseEntity.ok(GameView.from(game));
+    }
+
+    @PostMapping("/{gameId}/start")
+    public ResponseEntity<GameView> startGame(@PathVariable String gameId, @RequestBody CreateGameRequest request) {
+        log.info("start game request: gameId={}, playerName={}", gameId, request.getPlayerName());
+        Game game = gameService.startGame(gameId, request.getPlayerName());
+        GameView gameView = GameView.from(game);
+
+        simpMessagingTemplate.convertAndSend("/topic/game/" + gameId + "/state", gameView);
+        GameEvent startEvent = GameEvent.gameStarted(gameId);
+        simpMessagingTemplate.convertAndSend("/topic/game/" + gameId + "/event", startEvent);
+
+        return ResponseEntity.ok(gameView);
+    }
+
     private void publishStateAndReadyEvent(Game game, GameView gameView) {
         simpMessagingTemplate.convertAndSend("/topic/game/" + game.getId() + "/state", gameView);
 

@@ -17,5 +17,9 @@ public class Game {
 	private String player2Name;
 	private GameStatus status;
 	@Builder.Default
+	private boolean player1Ready = false;
+	@Builder.Default
+	private boolean player2Ready = false;
+	@Builder.Default
 	private Instant createdAt = Instant.now();
 }

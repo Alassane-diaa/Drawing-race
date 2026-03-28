@@ -2,6 +2,7 @@ package com.projetase.drawing.model;
 
 public enum GameStatus {
     WAITING,
-    IN_PROGRESS
+    IN_PROGRESS,
+    STARTED
 }
 

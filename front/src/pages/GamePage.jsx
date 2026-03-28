@@ -4,6 +4,8 @@ import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 
 const WS_BASE_URL = 'http://localhost:8080/ws';
+const API_BASE_URL = 'http://localhost:8080';
+const MULTIPLAYER_SESSION_KEY = 'multiplayerSession';
 const MAIN_CANVAS_WIDTH = 800;
 const MAIN_CANVAS_HEIGHT = 600;
 const OPPONENT_CANVAS_WIDTH = 400;
@@ -21,15 +23,82 @@ export default function GamePage() {
     const [strokeCoords, setStrokeCoords] = useState([]);
     const [predictionData, setPredictionData] = useState(null);
     const [targetCategory, setTargetCategory] = useState("");
+
+    // Difficulty - get from location FIRST
+    const location = useLocation();
+    const storedSession = (() => {
+        try {
+            const rawSession = localStorage.getItem(MULTIPLAYER_SESSION_KEY);
+            return rawSession ? JSON.parse(rawSession) : null;
+        } catch (error) {
+            console.warn('Unable to read multiplayer session:', error);
+            return null;
+        }
+    })();
+
+    const multiplayer = Boolean(location.state?.multiplayer ?? storedSession?.multiplayer);
+    const gameId = location.state?.gameId || storedSession?.gameId;
+    const playerName = location.state?.playerName || storedSession?.playerName;
+    const selectedDifficulty = location.state?.difficulty || "medium";
+    const initialGameState = location.state?.gameState;
+
     // Pour timer
     const [isActive, setIsActive] = useState(false);
     const [hasStartedGame, setHasStartedGame] = useState(false);
-    // Difficulty
-    const location = useLocation();
-    const multiplayer = Boolean(location.state?.multiplayer);
-    const gameId = location.state?.gameId;
-    const playerName = location.state?.playerName;
-    const selectedDifficulty = location.state?.difficulty || "medium";
+    const [gameReady, setGameReady] = useState(false);
+    const [gameState, setGameState] = useState(initialGameState);
+
+    useEffect(() => {
+        if (!multiplayer || !gameId || !playerName) {
+            return;
+        }
+
+        try {
+            localStorage.setItem(MULTIPLAYER_SESSION_KEY, JSON.stringify({
+                gameId,
+                playerName,
+                multiplayer: true,
+            }));
+        } catch (error) {
+            console.warn('Unable to persist multiplayer session:', error);
+        }
+    }, [multiplayer, gameId, playerName]);
+
+    useEffect(() => {
+        if (!multiplayer || !gameId) {
+            return;
+        }
+
+        let isCancelled = false;
+
+        const fetchCurrentGameState = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/game/${gameId}`);
+                if (!response.ok) {
+                    console.error(`Unable to restore game state (status ${response.status})`);
+                    return;
+                }
+
+                const state = await response.json();
+                if (isCancelled) {
+                    return;
+                }
+
+                setGameState(state);
+                if (state.status === 'STARTED') {
+                    setGameReady(true);
+                }
+            } catch (error) {
+                console.error('Unable to restore game state:', error);
+            }
+        };
+
+        fetchCurrentGameState();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [multiplayer, gameId]);
 
     // Selon la difficulté
     const getInitialTime = () => {
@@ -155,6 +224,13 @@ export default function GamePage() {
     };
 
     useEffect(() => {
+        // En solo, toujours prêt; en multijoueur, attendre GAME_STARTED
+        if (!multiplayer) {
+            setGameReady(true);
+        }
+    }, [multiplayer]);
+
+    useEffect(() => {
         if (!multiplayer || !gameId) {
             return;
         }
@@ -181,6 +257,21 @@ export default function GamePage() {
                 const incomingStrokes = splitPointsIntoStrokes(incomingPoints);
                 opponentStrokesRef.current = [...opponentStrokesRef.current, ...incomingStrokes];
                 drawCenteredOnOpponentCanvas(opponentStrokesRef.current);
+            });
+
+            client.subscribe(`/topic/game/${gameId}/event`, (frame) => {
+                const gameEvent = JSON.parse(frame.body);
+                if (gameEvent.type === 'GAME_STARTED') {
+                    setGameReady(true);
+                }
+            });
+
+            client.subscribe(`/topic/game/${gameId}/state`, (frame) => {
+                const state = JSON.parse(frame.body);
+                setGameState(state);
+                if (state.status === 'STARTED') {
+                    setGameReady(true);
+                }
             });
         };
 
@@ -210,11 +301,125 @@ export default function GamePage() {
     }, [isActive, timeLeft]);
 
     const startNewGame = async () => {
+        if (multiplayer && !gameReady) {
+            alert('Waiting for the game to start...');
+            return;
+        }
+
         setHasStartedGame(true);
         await fetchRandomCategory();
         setTimeLeft(getInitialTime())
         setIsActive(true);
         clearCanvas();
+    };
+
+    const markAsReady = async () => {
+        if (!multiplayer || !gameId) {
+            console.warn('Mark ready: Missing multiplayer or gameId');
+            return;
+        }
+
+        try {
+            console.log(`Marking ${playerName} as ready in game ${gameId}`);
+            const response = await fetch(`http://localhost:8080/game/${gameId}/ready`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ playerName })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                const errorMsg = errorData.message || `Server error: ${response.status}`;
+                console.error('Mark ready failed:', errorMsg);
+                alert(`Failed to mark as ready: ${errorMsg}`);
+                return;
+            }
+
+            const updatedGame = await response.json();
+            console.log('Mark ready successful:', updatedGame);
+            setGameState(updatedGame);
+        } catch (error) {
+            console.error('Error marking as ready:', error);
+            alert(`Network error: ${error.message}`);
+        }
+    };
+
+    const markAsNotReady = async () => {
+        if (!multiplayer || !gameId) {
+            console.warn('Mark not ready: Missing multiplayer or gameId');
+            return;
+        }
+
+        try {
+            console.log(`Marking ${playerName} as not ready in game ${gameId}`);
+            const response = await fetch(`http://localhost:8080/game/${gameId}/unready`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ playerName })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                const errorMsg = errorData.message || `Server error: ${response.status}`;
+                console.error('Mark not ready failed:', errorMsg);
+                alert(`Failed to mark as not ready: ${errorMsg}`);
+                return;
+            }
+
+            const updatedGame = await response.json();
+            console.log('Mark not ready successful:', updatedGame);
+            setGameState(updatedGame);
+        } catch (error) {
+            console.error('Error marking as not ready:', error);
+            alert(`Network error: ${error.message}`);
+        }
+    };
+
+    const startMultiplayerGame = async () => {
+        if (!multiplayer || !gameId) {
+            console.warn('Start game: Missing multiplayer or gameId');
+            return;
+        }
+        
+        if (playerName !== gameState?.player1Name) {
+            console.error(`Start game: Only Player 1 can start. Current player: ${playerName}, Player 1: ${gameState?.player1Name}`);
+            alert('Only Player 1 can start the game!');
+            return;
+        }
+
+        if (!gameState?.player1Ready || !gameState?.player2Ready) {
+            console.error(`Start game: Players not ready. P1 Ready: ${gameState?.player1Ready}, P2 Ready: ${gameState?.player2Ready}`);
+            alert('Both players must be ready before starting!');
+            return;
+        }
+
+        try {
+            console.log(`Starting game ${gameId} as ${playerName}`);
+            const response = await fetch(`http://localhost:8080/game/${gameId}/start`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ playerName })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                const errorMsg = errorData.message || `Server error: ${response.status}`;
+                console.error('Start game failed:', errorMsg);
+                alert(`Cannot start game: ${errorMsg}`);
+                return;
+            }
+            
+            console.log('Start game request sent successfully, waiting for GAME_STARTED event...');
+        } catch (error) {
+            console.error('Error starting game:', error);
+            alert(`Network error: ${error.message}`);
+        }
     };
 
     const handleTimeUp = () => {
@@ -374,17 +579,45 @@ export default function GamePage() {
             <div className="CategoryADessiner">
                 {hasStartedGame && targetCategory ? (
                     <h2>{"->"} <strong> {targetCategory} </strong> {"<-"}</h2>
+                ) : multiplayer && !gameReady ? (
+                    <p>Waiting for the game to start...</p>
                 ) : (
                     <p>Clique sur "Commencer la partie" </p>
                 )}
             </div>
+
+            {multiplayer && gameState && !gameReady && (
+                <div>
+                    <h3>Ready Up! (Game: {gameState.status})</h3>
+                    <p>
+                        Player 1: {gameState.player1Name} 
+                        {gameState.player1Ready ? ' ✓ Ready' : ' ⏳ Not Ready'}
+                        {playerName === gameState.player1Name && ' (You)'}
+                    </p>
+                    <p>
+                        Player 2: {gameState.player2Name || 'Waiting for join...'} 
+                        {gameState.player2Name ? (gameState.player2Ready ? ' ✓ Ready' : ' ⏳ Not Ready') : ''}
+                        {playerName === gameState.player2Name && ' (You)'}
+                    </p>
+                    {playerName === gameState.player2Name && (
+                        gameState.player2Ready ? (
+                            <button onClick={markAsNotReady}>Mark as Not Ready</button>
+                        ) : (
+                            <button onClick={markAsReady}>Mark as Ready</button>
+                        )
+                    )}
+                    {playerName === gameState.player1Name && gameState.player1Ready && gameState.player2Ready && gameState.player2Name && (
+                        <button onClick={startMultiplayerGame}>Start Game</button>
+                    )}
+                </div>
+            )}
 
             <div>
                 {hasStartedGame ? `00:${timeLeft < 10 ? `0${timeLeft}` : timeLeft}` : '--:--'}
             </div>
 
             <div>
-                <button className = "grosBouton" onClick={startNewGame}>Commencer la partie</button>
+                <button className="grosBouton" onClick={startNewGame} disabled={multiplayer && !gameReady}>Commencer la partie</button>
             </div>
 
             <div>

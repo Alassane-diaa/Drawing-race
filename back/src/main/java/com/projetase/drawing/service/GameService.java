@@ -21,6 +21,7 @@ public class GameService {
 		Game game = Game.builder()
 				.id(UUID.randomUUID().toString())
 				.player1Name(normalizedPlayerName)
+				.player1Ready(true)
 				.status(GameStatus.WAITING)
 				.build();
 
@@ -63,6 +64,15 @@ public class GameService {
 		return createGame(normalizedPlayerName);
 	}
 
+	public Game getGameById(String gameId) {
+		Game game = games.get(gameId);
+		if (game == null) {
+			throw new GameException("GAME_NOT_FOUND", "Partie introuvable: " + gameId);
+		}
+
+		return game;
+	}
+
 	public Game validateStrokeSender(String gameId, String playerName) {
 		String normalizedPlayerName = normalizePlayerName(playerName);
 		Game game = games.get(gameId);
@@ -70,14 +80,81 @@ public class GameService {
 			throw new GameException("GAME_NOT_FOUND", "Partie introuvable: " + gameId);
 		}
 
-		if (!GameStatus.IN_PROGRESS.equals(game.getStatus())) {
-			throw new GameException("GAME_NOT_READY", "La partie n'est pas encore en cours");
+		if (!GameStatus.STARTED.equals(game.getStatus()) && !GameStatus.IN_PROGRESS.equals(game.getStatus())) {
+			throw new GameException("GAME_NOT_READY", "La partie n'a pas encore demarre");
 		}
 
 		if (!normalizedPlayerName.equals(game.getPlayer1Name()) && !normalizedPlayerName.equals(game.getPlayer2Name())) {
 			throw new GameException("PLAYER_NOT_IN_GAME", "Ce joueur ne fait pas partie de la partie");
 		}
 
+		return game;
+	}
+
+	public Game markPlayerReady(String gameId, String playerName) {
+		String normalizedPlayerName = normalizePlayerName(playerName);
+		Game game = games.get(gameId);
+		if (game == null) {
+			throw new GameException("GAME_NOT_FOUND", "Partie introuvable: " + gameId);
+		}
+
+		if (!GameStatus.IN_PROGRESS.equals(game.getStatus())) {
+			throw new GameException("GAME_NOT_READY", "La partie n'est pas en attente de joueurs");
+		}
+
+		if (normalizedPlayerName.equals(game.getPlayer1Name())) {
+			game.setPlayer1Ready(true);
+		} else if (normalizedPlayerName.equals(game.getPlayer2Name())) {
+			game.setPlayer2Ready(true);
+		} else {
+			throw new GameException("PLAYER_NOT_IN_GAME", "Ce joueur ne fait pas partie de la partie");
+		}
+
+		return game;
+	}
+
+	public Game markPlayerNotReady(String gameId, String playerName) {
+		String normalizedPlayerName = normalizePlayerName(playerName);
+		Game game = games.get(gameId);
+		if (game == null) {
+			throw new GameException("GAME_NOT_FOUND", "Partie introuvable: " + gameId);
+		}
+
+		if (!GameStatus.IN_PROGRESS.equals(game.getStatus())) {
+			throw new GameException("GAME_NOT_READY", "La partie n'est pas en attente de joueurs");
+		}
+
+		if (normalizedPlayerName.equals(game.getPlayer1Name())) {
+			game.setPlayer1Ready(false);
+		} else if (normalizedPlayerName.equals(game.getPlayer2Name())) {
+			game.setPlayer2Ready(false);
+		} else {
+			throw new GameException("PLAYER_NOT_IN_GAME", "Ce joueur ne fait pas partie de la partie");
+		}
+
+		return game;
+	}
+
+	public Game startGame(String gameId, String playerName) {
+		String normalizedPlayerName = normalizePlayerName(playerName);
+		Game game = games.get(gameId);
+		if (game == null) {
+			throw new GameException("GAME_NOT_FOUND", "Partie introuvable: " + gameId);
+		}
+
+		if (!GameStatus.IN_PROGRESS.equals(game.getStatus())) {
+			throw new GameException("GAME_NOT_READY", "La partie n'est pas en attente de démarrage");
+		}
+
+		if (!normalizedPlayerName.equals(game.getPlayer1Name())) {
+			throw new GameException("NOT_PLAYER1", "Seul le créateur peut lancer la partie");
+		}
+
+		if (!game.isPlayer1Ready() || !game.isPlayer2Ready()) {
+			throw new GameException("PLAYERS_NOT_READY", "Les deux joueurs doivent être prêts");
+		}
+
+		game.setStatus(GameStatus.STARTED);
 		return game;
 	}
 

@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 
 const API_BASE_URL = 'http://localhost:8080';
 const WS_BASE_URL = 'http://localhost:8080/ws';
+const MULTIPLAYER_SESSION_KEY = 'multiplayerSession';
 
 const parseErrorResponse = async (response, fallbackMessage) => {
     try {
@@ -64,6 +65,38 @@ const joinRandomGame = async (userName) => {
     return response.json();
 };
 
+const markPlayerReady = async (gameId, userName) => {
+    const response = await fetch(`${API_BASE_URL}/game/${gameId}/ready`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ playerName: userName })
+    });
+
+    if (!response.ok) {
+        throw new Error(await parseErrorResponse(response, 'Unable to mark as ready'));
+    }
+
+    return response.json();
+};
+
+const startGame = async (gameId, userName) => {
+    const response = await fetch(`${API_BASE_URL}/game/${gameId}/start`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ playerName: userName })
+    });
+
+    if (!response.ok) {
+        throw new Error(await parseErrorResponse(response, 'Unable to start game'));
+    }
+
+    return response.json();
+};
+
 export default function MultiplayerPage() {
     const { user, isUser } = useAuth();
     const navigate = useNavigate();
@@ -90,11 +123,22 @@ export default function MultiplayerPage() {
     }, []);
 
     const redirectToGame = (currentGame) => {
+        try {
+            localStorage.setItem(MULTIPLAYER_SESSION_KEY, JSON.stringify({
+                gameId: currentGame.gameId,
+                playerName: user.username,
+                multiplayer: true,
+            }));
+        } catch (error) {
+            console.warn('Unable to persist multiplayer session:', error);
+        }
+
         navigate('/game', {
             state: {
                 gameId: currentGame.gameId,
                 playerName: user.username,
                 multiplayer: true,
+                gameState: currentGame,
             },
         });
     };
@@ -113,7 +157,7 @@ export default function MultiplayerPage() {
             client.subscribe(`/topic/game/${currentGame.gameId}/state`, (frame) => {
                 const gameState = JSON.parse(frame.body);
                 setGame(gameState);
-                if (gameState.status === 'IN_PROGRESS') {
+                if (gameState.status === 'STARTED') {
                     redirectToGame(gameState);
                 }
             });
@@ -124,7 +168,18 @@ export default function MultiplayerPage() {
                     gameEvent.type === 'PLAYER2_JOINED' &&
                     gameEvent.targetPlayerName === user.username
                 ) {
-                    redirectToGame({ ...currentGame, status: 'IN_PROGRESS' });
+                    setGame(prev => ({ ...prev, player2Name: gameEvent.joinedPlayerName }));
+                }
+                if (gameEvent.type === 'PLAYER_READY') {
+                    // Mettre à jour l'état de préparation
+                    setGame(prev => ({
+                        ...prev,
+                        player1Ready: gameEvent.joinedPlayerName === prev.player1Name ? true : prev.player1Ready,
+                        player2Ready: gameEvent.joinedPlayerName === prev.player2Name ? true : prev.player2Ready,
+                    }));
+                }
+                if (gameEvent.type === 'GAME_STARTED') {
+                    redirectToGame(currentGame);
                 }
             });
         };
@@ -194,6 +249,29 @@ export default function MultiplayerPage() {
             }
         } catch (joinError) {
             setError(joinError.message);
+        }
+    };
+
+    const handleMarkReady = async () => {
+        if (!game) return;
+
+        try {
+            setError('');
+            const updatedGame = await markPlayerReady(game.gameId, user.username);
+            setGame(updatedGame);
+        } catch (error) {
+            setError(error.message);
+        }
+    };
+
+    const handleStartGame = async () => {
+        if (!game) return;
+
+        try {
+            setError('');
+            await startGame(game.gameId, user.username);
+        } catch (error) {
+            setError(error.message);
         }
     };
 

@@ -23,5 +23,23 @@ public class GameEvent {
                 .timestamp(System.currentTimeMillis())
                 .build();
     }
+
+    public static GameEvent playerReady(String gameId, String playerName) {
+        return GameEvent.builder()
+                .type("PLAYER_READY")
+                .gameId(gameId)
+                .joinedPlayerName(playerName)
+                .timestamp(System.currentTimeMillis())
+                .build();
+    }
+
+    public static GameEvent gameStarted(String gameId) {
+        return GameEvent.builder()
+                .type("GAME_STARTED")
+                .gameId(gameId)
+                .status("STARTED")
+                .timestamp(System.currentTimeMillis())
+                .build();
+    }
 }
 
