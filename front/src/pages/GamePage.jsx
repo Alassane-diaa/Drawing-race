@@ -4,11 +4,18 @@ import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 
 const WS_BASE_URL = 'http://localhost:8080/ws';
+const MAIN_CANVAS_WIDTH = 800;
+const MAIN_CANVAS_HEIGHT = 600;
+const OPPONENT_CANVAS_WIDTH = 400;
+const OPPONENT_CANVAS_HEIGHT = 300;
 
 export default function GamePage() {
     const canvasRef = useRef(null);
     const canvasRefOpponent = useRef(null);
     const stompClientRef = useRef(null);
+    const currentStrokeRef = useRef([]);
+    const opponentStrokesRef = useRef([]);
+    const [isDrawing, setIsDrawing] = useState(false);
     const [brushState, setBrushState] = useState('pen'); // 'pen' or 'eraser'
     const [brushSize, setBrushSize] = useState(5);
     const [strokeCoords, setStrokeCoords] = useState([]);
@@ -16,6 +23,7 @@ export default function GamePage() {
     const [targetCategory, setTargetCategory] = useState("");
     // Pour timer
     const [isActive, setIsActive] = useState(false);
+    const [hasStartedGame, setHasStartedGame] = useState(false);
     // Difficulty
     const location = useLocation();
     const multiplayer = Boolean(location.state?.multiplayer);
@@ -37,40 +45,114 @@ export default function GamePage() {
     };
     const palierConfidence = useState(getInitialPalier())[0];
 
-    const drawStrokeOnCanvas = (canvas, points) => {
-        if (!canvas || !points || points.length === 0) {
+    const clearOpponentCanvas = () => {
+        const canvas = canvasRefOpponent.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    };
+
+    const splitPointsIntoStrokes = (points) => {
+        const strokes = [];
+        let currentStroke = [];
+
+        points.forEach((point) => {
+            if (!Number.isFinite(point?.x) || !Number.isFinite(point?.y)) {
+                return;
+            }
+
+            currentStroke.push(point);
+
+            if (point.pen === 1) {
+                if (currentStroke.length > 0) {
+                    strokes.push(currentStroke);
+                }
+                currentStroke = [];
+            }
+        });
+
+        if (currentStroke.length > 0) {
+            strokes.push(currentStroke);
+        }
+
+        return strokes;
+    };
+
+    const drawCenteredOnOpponentCanvas = (strokes) => {
+        const canvas = canvasRefOpponent.current;
+        if (!canvas || !strokes || strokes.length === 0) {
+            clearOpponentCanvas();
             return; 
         }
 
+        const validPoints = strokes.flat().filter(
+            (point) => Number.isFinite(point?.x) && Number.isFinite(point?.y)
+        );
+
+        if (validPoints.length === 0) {
+            clearOpponentCanvas();
+            return;
+        }
+
+        const minX = Math.min(...validPoints.map((point) => point.x));
+        const maxX = Math.max(...validPoints.map((point) => point.x));
+        const minY = Math.min(...validPoints.map((point) => point.y));
+        const maxY = Math.max(...validPoints.map((point) => point.y));
+
+        const drawingWidth = Math.max(maxX - minX, 1);
+        const drawingHeight = Math.max(maxY - minY, 1);
+        const fitScale = Math.min(
+            (canvas.width * 0.9) / drawingWidth,
+            (canvas.height * 0.9) / drawingHeight
+        );
+        const scale = Math.max(0.1, fitScale);
+
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+
+        const transformPoint = (point) => ({
+            x: (point.x - centerX) * scale + canvas.width / 2,
+            y: (point.y - centerY) * scale + canvas.height / 2,
+            pen: point.pen,
+        });
+
         const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
         ctx.lineWidth = 4;
         ctx.strokeStyle = 'black';
 
-        const [firstPoint, ...restPoints] = points;
-        ctx.beginPath();
-        ctx.moveTo(firstPoint.x, firstPoint.y);
+        strokes.forEach((stroke) => {
+            const transformedStroke = stroke
+                .filter((point) => Number.isFinite(point?.x) && Number.isFinite(point?.y))
+                .map(transformPoint);
 
-        restPoints.forEach((point) => {
-            if (point.pen === 1) {
-                ctx.stroke();
-                ctx.closePath();
-                ctx.beginPath();
-                ctx.moveTo(point.x, point.y);
+            if (transformedStroke.length === 0) {
                 return;
             }
-            ctx.lineTo(point.x, point.y);
+
+            if (transformedStroke.length === 1) {
+                const point = transformedStroke[0];
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 2, 0, 2 * Math.PI);
+                ctx.fillStyle = 'black';
+                ctx.fill();
+                ctx.closePath();
+                return;
+            }
+
+            ctx.beginPath();
+            ctx.moveTo(transformedStroke[0].x, transformedStroke[0].y);
+            for (let index = 1; index < transformedStroke.length; index += 1) {
+                const point = transformedStroke[index];
+                ctx.lineTo(point.x, point.y);
+            }
+            ctx.stroke();
+            ctx.closePath();
         });
-
-        ctx.stroke();
-        ctx.closePath();
     };
-
-
-    useEffect(() => {
-        startNewGame();
-    }, []);
 
     useEffect(() => {
         if (!multiplayer || !gameId) {
@@ -88,7 +170,17 @@ export default function GamePage() {
                 if (payload.playerName === playerName) {
                     return;
                 }
-                drawStrokeOnCanvas(canvasRefOpponent.current, payload.stroke?.points || []);
+
+                const incomingPoints = payload.stroke?.points || [];
+                if (incomingPoints.length === 0) {
+                    opponentStrokesRef.current = [];
+                    clearOpponentCanvas();
+                    return;
+                }
+
+                const incomingStrokes = splitPointsIntoStrokes(incomingPoints);
+                opponentStrokesRef.current = [...opponentStrokesRef.current, ...incomingStrokes];
+                drawCenteredOnOpponentCanvas(opponentStrokesRef.current);
             });
         };
 
@@ -118,6 +210,7 @@ export default function GamePage() {
     }, [isActive, timeLeft]);
 
     const startNewGame = async () => {
+        setHasStartedGame(true);
         await fetchRandomCategory();
         setTimeLeft(getInitialTime())
         setIsActive(true);
@@ -132,12 +225,12 @@ export default function GamePage() {
     };
     // Gestion Victoire
     useEffect(() => {
-        if (predictionData && predictionData.prediction.category === targetCategory && predictionData.prediction.confidence >= palierConfidence) {
+        if (hasStartedGame && predictionData && predictionData.prediction.category === targetCategory && predictionData.prediction.confidence >= palierConfidence) {
             setIsActive(false); // Stop le timer
             alert("Congratulations! The AI recognized your drawing!");
             // Enlever les alertes euh et lier tot ça à la difficulté
         }
-    }, [predictionData, targetCategory]);
+    }, [hasStartedGame, predictionData, targetCategory, palierConfidence]);
 
     const fetchRandomCategory = async () => {
         try {
@@ -163,13 +256,14 @@ export default function GamePage() {
         ctx.strokeStyle = brushState === 'pen' ? 'black' : 'white';
         ctx.beginPath();
         ctx.moveTo(x, y);
-        setStrokeCoords(prevCoords => [...prevCoords, { x, y, pen }]);
+        setIsDrawing(true);
+        currentStrokeRef.current = [{ x, y, pen }];
     }
 
     const handleMouseMoveCanvas = (event) => {
-        if (!isActive) return;
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
+        if (!isDrawing) return;
         if (event.buttons === 1) { // Left mouse button
             const rect = canvas.getBoundingClientRect();
             const x = event.clientX - rect.left;
@@ -177,11 +271,14 @@ export default function GamePage() {
             const pen = 0;
             ctx.lineTo(x, y);
             ctx.stroke();
-            setStrokeCoords(prevCoords => [...prevCoords, { x, y, pen }]);
+            currentStrokeRef.current.push({ x, y, pen });
         }
     }
 
     const handleMouseUpCanvas = async (event) => {
+        if (!isDrawing) return;
+        setIsDrawing(false);
+
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         ctx.closePath();
@@ -189,10 +286,11 @@ export default function GamePage() {
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
         const pen = 1;
-        
-        // Create the updated coords array with the final point
-        // Without it, React updates insachroneously, then the last point isn't sent to the backend
-        const updatedCoords = [...strokeCoords, { x, y, pen }];
+
+        const finishedStroke = [...currentStrokeRef.current, { x, y, pen }];
+        currentStrokeRef.current = [];
+
+        const updatedCoords = [...strokeCoords, ...finishedStroke];
         setStrokeCoords(updatedCoords);
 
         if (multiplayer && stompClientRef.current?.connected && gameId && playerName) {
@@ -201,13 +299,12 @@ export default function GamePage() {
                 body: JSON.stringify({
                     playerName,
                     stroke: {
-                        points: updatedCoords,
+                        points: finishedStroke,
                     },
                 }),
             });
         }
-        
-        console.log(updatedCoords)
+
         const response = await fetch("http://localhost:8080/process", {
             method: "POST",
             headers: {
@@ -231,17 +328,42 @@ export default function GamePage() {
         ctx.beginPath();
         ctx.arc(x, y, 3, 0, 2 * Math.PI);
         ctx.fill();
+
+        const clickPoint = { x, y, pen: 1 };
+        const updatedCoords = [...strokeCoords, clickPoint];
+        setStrokeCoords(updatedCoords);
+
+        if (multiplayer && stompClientRef.current?.connected && gameId && playerName) {
+            stompClientRef.current.publish({
+                destination: `/app/game/${gameId}/stroke`,
+                body: JSON.stringify({
+                    playerName,
+                    stroke: {
+                        points: [clickPoint],
+                    },
+                }),
+            });
+        }
     }
 
     const clearCanvas = async () => {
         setStrokeCoords([]);
+        currentStrokeRef.current = [];
+        setIsDrawing(false);
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        if (canvasRefOpponent.current) {
-            const opponentCtx = canvasRefOpponent.current.getContext('2d');
-            opponentCtx.clearRect(0, 0, canvasRefOpponent.current.width, canvasRefOpponent.current.height);
+        if (multiplayer && stompClientRef.current?.connected && gameId && playerName) {
+            stompClientRef.current.publish({
+                destination: `/app/game/${gameId}/stroke`,
+                body: JSON.stringify({
+                    playerName,
+                    stroke: {
+                        points: [],
+                    },
+                }),
+            });
         }
     }
 
@@ -250,19 +372,19 @@ export default function GamePage() {
             <h1>Quick, Draw:</h1>
 
             <div className="CategoryADessiner">
-                {targetCategory ? (
+                {hasStartedGame && targetCategory ? (
                     <h2>{"->"} <strong> {targetCategory} </strong> {"<-"}</h2>
                 ) : (
-                    <p>Loading...</p>
+                    <p>Clique sur "Commencer la partie" </p>
                 )}
             </div>
 
             <div>
-                00:{timeLeft < 10 ? `0${timeLeft}` : timeLeft}
+                {hasStartedGame ? `00:${timeLeft < 10 ? `0${timeLeft}` : timeLeft}` : '--:--'}
             </div>
 
             <div>
-                <button className = "grosBouton" onClick={startNewGame}>Start / Reset</button>
+                <button className = "grosBouton" onClick={startNewGame}>Commencer la partie</button>
             </div>
 
             <div>
@@ -272,7 +394,7 @@ export default function GamePage() {
                 <input type="range" value={brushSize} onChange={(e) => setBrushSize(parseInt(e.target.value))} min="1" max="50" />
             </div>
             <canvas ref={canvasRef} 
-                width="800" height="600" 
+                width={MAIN_CANVAS_WIDTH} height={MAIN_CANVAS_HEIGHT}
                 style={{ border: "1px solid black", backgroundColor: "white" }} 
                 onClick={onClickCanvas}
                 onMouseDown={onMouseDownCanvas}
@@ -282,8 +404,8 @@ export default function GamePage() {
         
             {multiplayer && (
                 <canvas ref={canvasRefOpponent} 
-                    width="400" height="300" 
-                    style={{ border: "1px solid black", backgroundColor: "white" }} >
+                    width={OPPONENT_CANVAS_WIDTH} height={OPPONENT_CANVAS_HEIGHT}
+                    style={{ border: "1px solid black", backgroundColor: "white", pointerEvents: "none" }} >
                 </canvas>
             )}
             
