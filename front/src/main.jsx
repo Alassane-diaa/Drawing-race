@@ -9,6 +9,7 @@ import RegisterPage from './pages/RegisterPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import MultiplayerPage from './pages/MultiplayerPage.jsx'
 import { ProtectedRoute } from './routes/ProtectedRoute';
+import { PublicOnlyRoute } from './routes/PublicOnlyRoute';
 import { AuthProvider } from './contexts/AuthContext.jsx' 
 
 createRoot(document.getElementById('root')).render(
@@ -26,8 +27,22 @@ createRoot(document.getElementById('root')).render(
                   </ProtectedRoute>
               } 
           />
-          <Route path="/register" element={<RegisterPage/>} />
-          <Route path="/login" element={<LoginPage/>} />
+          <Route
+            path="/register"
+            element={
+              <PublicOnlyRoute>
+                <RegisterPage />
+              </PublicOnlyRoute>
+            }
+          />
+          <Route
+            path="/login"
+            element={
+              <PublicOnlyRoute>
+                <LoginPage />
+              </PublicOnlyRoute>
+            }
+          />
           <Route 
             path="/play" 
             element={

@@ -1,10 +1,12 @@
 import {Link} from "react-router-dom";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 
 export default function HomePage() {
     const [difficulty, setDifficulty] = useState("medium");
     const navigate = useNavigate();
+    const { isUser, user, logout } = useAuth();
 
     const handleStartGame = () => {
     navigate("/game", { state: { difficulty } });
@@ -42,10 +44,13 @@ export default function HomePage() {
             {/* Navigate au lieu de Link pour envoyer difficulté */}
             <button className="grosBouton" onClick={handleStartGame}>Play</button>
             <div>
-                <Link to="login"> <button>Se connecter</button> </Link>
-                <Link to="register"> <button>Créer un compte</button> </Link>
+                {!isUser && <Link to="login"> <button>Se connecter</button> </Link>}
+                {!isUser && <Link to="register"> <button>Créer un compte</button> </Link>}
                 <Link to="play"> <button>Multiplayer</button> </Link>
+                {isUser && <Link to="stats"> <button>Stats</button> </Link>}
+                {isUser && <button onClick={logout}>Se déconnecter</button>}
             </div>
+            {isUser && user?.username && <p>Connecté: {user.username}</p>}
         </main>
         
 
