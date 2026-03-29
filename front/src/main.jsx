@@ -7,6 +7,7 @@ import GamePage from './pages/GamePage.jsx'
 import StatsPage from './pages/StatsPage.jsx'
 import RegisterPage from './pages/RegisterPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
+import MultiplayerPage from './pages/MultiplayerPage.jsx'
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext.jsx' 
 
@@ -27,6 +28,13 @@ createRoot(document.getElementById('root')).render(
           />
           <Route path="/register" element={<RegisterPage/>} />
           <Route path="/login" element={<LoginPage/>} />
+          <Route 
+            path="/play" 
+            element={
+            <ProtectedRoute>
+              <MultiplayerPage/>
+            </ProtectedRoute>
+          } />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

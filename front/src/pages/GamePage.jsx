@@ -1,133 +1,313 @@
-import { useEffect, useState, useRef } from "react";
+﻿import { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+
+// Services
+import {
+    getGameState,
+    markPlayerReady,
+    markPlayerNotReady,
+    startGame as startMultiplayerGame
+} from '../services/gameService';
+import {
+    splitPointsIntoStrokes,
+    drawCenteredOnCanvas
+} from '../services/canvasService';
+
+// Hooks
+import { useGameWebsocket, publishStroke } from '../hooks/useGameWebsocket';
+import { useCanvasDrawing } from '../hooks/useCanvasDrawing';
+import { useGameLogic } from '../hooks/useGameLogic';
+
+// Components
+import ReadyUpUI from '../components/ReadyUpUI';
+import GameTools from '../components/GameTools';
+import PredictionDisplay from '../components/PredictionDisplay';
+
+// Constants
+const MAIN_CANVAS_WIDTH = 800;
+const MAIN_CANVAS_HEIGHT = 600;
+const OPPONENT_CANVAS_WIDTH = 400;
+const OPPONENT_CANVAS_HEIGHT = 300;
+const MULTIPLAYER_SESSION_KEY = 'multiplayerSession';
 
 export default function GamePage() {
     const canvasRef = useRef(null);
-    const [brushState, setBrushState] = useState('pen'); // 'pen' or 'eraser'
-    const [brushSize, setBrushSize] = useState(5);
-    const [strokeCoords, setStrokeCoords] = useState([]);
-    const [predictionData, setPredictionData] = useState(null);
+    const canvasRefOpponent = useRef(null);
+    const opponentStrokesRef = useRef([]);
 
-    const onMouseDownCanvas = (event) => {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        const rect = canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-        const pen = 0;
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
-
-        ctx.lineWidth = brushSize;
-        ctx.strokeStyle = brushState === 'pen' ? 'black' : 'white';
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        setStrokeCoords(prevCoords => [...prevCoords, { x, y, pen }]);
-    }
-
-    const handleMouseMoveCanvas = (event) => {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        if (event.buttons === 1) { // Left mouse button
-            const rect = canvas.getBoundingClientRect();
-            const x = event.clientX - rect.left;
-            const y = event.clientY - rect.top;
-            const pen = 0;
-            ctx.lineTo(x, y);
-            ctx.stroke();
-            setStrokeCoords(prevCoords => [...prevCoords, { x, y, pen }]);
+    // Location state
+    const location = useLocation();
+    const storedSession = (() => {
+        try {
+            const rawSession = localStorage.getItem(MULTIPLAYER_SESSION_KEY);
+            return rawSession ? JSON.parse(rawSession) : null;
+        } catch (error) {
+            console.warn('Unable to read multiplayer session:', error);
+            return null;
         }
-    }
+    })();
 
-    const handleMouseUpCanvas = async (event) => {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        ctx.closePath();
-        const rect = canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-        const pen = 1;
-        
-        // Create the updated coords array with the final point
-        // Without it, React updates insachroneously, then the last point isn't sent to the backend
-        const updatedCoords = [...strokeCoords, { x, y, pen }];
-        setStrokeCoords(updatedCoords);
-        
-        console.log(updatedCoords)
-        const response = await fetch(`http://localhost:8080/process`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                points: updatedCoords
-            })
-        });
-        
-        if (!response.ok) {
-            const text = await response.text();
-            console.error("API Error:", response.status, text);
+    // Game mode state
+    const multiplayer = Boolean(location.state?.multiplayer ?? storedSession?.multiplayer);
+    const gameId = location.state?.gameId || storedSession?.gameId;
+    const playerName = location.state?.playerName || storedSession?.playerName;
+    const selectedDifficulty = location.state?.difficulty || 'medium';
+    const initialGameState = location.state?.gameState;
+
+    // Local state
+    const [gameReady, setGameReady] = useState(!multiplayer || initialGameState?.status === 'STARTED');
+    const [gameState, setGameState] = useState(initialGameState);
+
+    // Save multiplayer session
+    useEffect(() => {
+        if (!multiplayer || !gameId || !playerName) {
             return;
         }
-        
-        const data = await response.json();
-        setPredictionData(data);
+
+        try {
+            localStorage.setItem(MULTIPLAYER_SESSION_KEY, JSON.stringify({
+                gameId,
+                playerName,
+                multiplayer: true,
+            }));
+        } catch (error) {
+            console.warn('Unable to persist multiplayer session:', error);
+        }
+    }, [multiplayer, gameId, playerName]);
+
+    // Restore game state from server (only if not already provided via redirect)
+    useEffect(() => {
+        if (!multiplayer || !gameId || initialGameState?.status === 'STARTED') {
+            return; // Don't fetch if already in game or not multiplayer
+        }
+
+        let isCancelled = false;
+
+        const fetchCurrentGameState = async () => {
+            try {
+                const state = await getGameState(gameId);
+                if (isCancelled) return;
+
+                setGameState(state);
+                if (state.status === 'STARTED') {
+                    setGameReady(true);
+                }
+            } catch (error) {
+                console.error('Unable to restore game state:', error);
+            }
+        };
+
+        fetchCurrentGameState();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [multiplayer, gameId]);
+
+    // Game logic hook
+    const gameLogic = useGameLogic(selectedDifficulty, handleTimeUp, handleVictory);
+
+    // Canvas drawing hook
+    const drawingControl = useCanvasDrawing(
+        canvasRef,
+        handleStrokeComplete,
+        handleCanvasClear
+    );
+
+    // WebSocket hook for game updates
+    const { clientRef: stompClientRef } = useGameWebsocket({
+        gameId,
+        playerName,
+        enabled: multiplayer && gameId && playerName,
+        onStrokeReceived: handleOpponentStroke,
+        onGameEvent: handleGameEvent,
+        onGameStateChanged: handleGameStateChanged
+    });
+
+    // ============ Event Handlers ============
+
+    function handleOpponentStroke(payload) {
+        const incomingPoints = payload.stroke?.points || [];
+
+        if (incomingPoints.length === 0) {
+            opponentStrokesRef.current = [];
+            drawCenteredOnCanvas(canvasRefOpponent.current, []);
+            return;
+        }
+
+        const incomingStrokes = splitPointsIntoStrokes(incomingPoints);
+
+        opponentStrokesRef.current = [...opponentStrokesRef.current, ...incomingStrokes];
+        drawCenteredOnCanvas(canvasRefOpponent.current, opponentStrokesRef.current);
     }
 
-    const onClickCanvas = (event) => {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        const rect = canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top; 
-        ctx.fillStyle = brushState === 'pen' ? 'black' : 'white';
-        ctx.beginPath();
-        ctx.arc(x, y, 3, 0, 2 * Math.PI);
-        ctx.fill();
+    function handleGameEvent(gameEvent) {
+        if (gameEvent.type === 'GAME_STARTED') {
+            setGameReady(true);
+        }
     }
 
-    const clearCanvas = async () => {
-        setStrokeCoords([]);
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    function handleGameStateChanged(state) {
+        setGameState(state);
+        if (state.status === 'STARTED') {
+            setGameReady(true);
+        }
     }
+
+    async function handleStrokeComplete(finishedStroke, updatedCoords) {
+        const activeClient = stompClientRef.current;
+
+        // Publish to multiplayer
+        if (multiplayer && gameId && playerName && activeClient?.connected) {
+            publishStroke(activeClient, gameId, playerName, finishedStroke);
+        }
+
+        // Get AI prediction
+        await gameLogic.fetchAndProcessDrawing(updatedCoords);
+    }
+
+    function handleCanvasClear() {
+        const activeClient = stompClientRef.current;
+
+        // Publish clear event to multiplayer
+        if (multiplayer && gameId && playerName && activeClient?.connected) {
+            publishStroke(activeClient, gameId, playerName, []);
+        }
+    }
+
+    function handleTimeUp(category) {
+        alert(`Time'\''s Up! You had to draw: ${category}`);
+        gameLogic.resetGame();
+    }
+
+    function handleVictory(category, confidence) {
+        alert(`Congratulations! The AI recognized your drawing: ${category} (${(confidence * 100).toFixed(2)}%)`);
+        gameLogic.resetGame();
+    }
+
+    // ============ Multiplayer Handlers ============
+
+    async function handleMarkReady() {
+        if (!multiplayer || !gameId) return;
+
+        try {
+            const updatedGame = await markPlayerReady(gameId, playerName);
+            setGameState(updatedGame);
+        } catch (error) {
+            alert(`Failed to mark as ready: ${error.message}`);
+        }
+    }
+
+    async function handleMarkNotReady() {
+        if (!multiplayer || !gameId) return;
+
+        try {
+            const updatedGame = await markPlayerNotReady(gameId, playerName);
+            setGameState(updatedGame);
+        } catch (error) {
+            alert(`Failed to mark as not ready: ${error.message}`);
+        }
+    }
+
+    async function handleStartGame() {
+        if (!multiplayer || !gameId) return;
+
+        try {
+            await startMultiplayerGame(gameId, playerName);
+        } catch (error) {
+            alert(`Cannot start game: ${error.message}`);
+        }
+    }
+
+    // ============ Render ============
 
     return (
-        <div className="game">
-            <h1>Game</h1>
-            <div>
-                <button onClick={() => setBrushState('pen')}>Pen</button>
-                <button onClick={() => setBrushState('eraser')}>Eraser</button>
-                <button onClick={clearCanvas}>Clear</button>
-                <input type="range" value={brushSize} onChange={(e) => setBrushSize(parseInt(e.target.value))} min="1" max="50" />
-            </div>
-            <canvas ref={canvasRef} 
-            width="800" height="600" 
-                style={{ border: "1px solid black", backgroundColor: "white" }} 
-                onClick={onClickCanvas}
-                onMouseDown={onMouseDownCanvas}
-                onMouseMove={handleMouseMoveCanvas}
-                onMouseUp={handleMouseUpCanvas}>
-                </canvas>
-            <div>
-                {predictionData ? (
-                    <div>
-                        <h2>Top Prediction: {predictionData.prediction.category}</h2>
-                        <p>Confidence: {(predictionData.prediction.confidence * 100).toFixed(2)}%</p>
-                        <h3>Top 10 Predictions:</h3>
-                        <ol>
-                            {predictionData.top10.map((pred, index) => (
-                                <li key={index}>
-                                    {pred.category} - {(pred.confidence * 100).toFixed(2)}%
-                                </li>
-                            ))}
-                        </ol>
-                    </div>
+        <div className="game-page">
+            <h1>Quick, Draw!</h1>
+
+            {/* Category Display */}
+            <div className="category-display">
+                {gameLogic.hasStartedGame && gameLogic.targetCategory ? (
+                    <h2>
+                        {'->'} <strong>{gameLogic.targetCategory}</strong> {'<-'}
+                    </h2>
+                ) : multiplayer && !gameReady ? (
+                    <p>Waiting for the game to start...</p>
                 ) : (
-                    <p>Draw something to get predictions!</p>
+                    <p>Click on "Commencer la partie" to start</p>
                 )}
             </div>
-        
+
+            {/* Multiplayer Ready-Up Interface */}
+            {multiplayer && gameState && !gameReady && (
+                <ReadyUpUI
+                    gameState={gameState}
+                    playerName={playerName}
+                    onMarkReady={handleMarkReady}
+                    onMarkNotReady={handleMarkNotReady}
+                    onStartGame={handleStartGame}
+                />
+            )}
+
+            {/* Timer */}
+            <div className="timer-display">
+                {gameLogic.hasStartedGame
+                    ? `00:${
+                          gameLogic.timeLeft < 10
+                              ? `0${gameLogic.timeLeft}`
+                              : gameLogic.timeLeft
+                      }`
+                    : '--:--'}
+            </div>
+
+            {/* Start Game Button */}
+            <div className="button-group">
+                <button
+                    className="btn-start-game"
+                    onClick={gameLogic.startNewGame}
+                    disabled={multiplayer && !gameReady}
+                >
+                    Commencer la partie
+                </button>
+            </div>
+
+            {/* Drawing Tools */}
+            <GameTools
+                brushState={drawingControl.brushState}
+                brushSize={drawingControl.brushSize}
+                onBrushStateChange={drawingControl.setBrushState}
+                onBrushSizeChange={drawingControl.setBrushSize}
+                onClear={drawingControl.clearCanvas}
+            />
+
+            {/* Main Canvas */}
+            <canvas
+                ref={canvasRef}
+                width={MAIN_CANVAS_WIDTH}
+                height={MAIN_CANVAS_HEIGHT}
+                style={{ border: '1px solid black', backgroundColor: 'white' }}
+                onClick={drawingControl.onClickCanvas}
+                onMouseDown={drawingControl.onMouseDownCanvas}
+                onMouseMove={drawingControl.handleMouseMoveCanvas}
+                onMouseUp={drawingControl.handleMouseUpCanvas}
+            />
+
+            {/* Opponent Canvas (Multiplayer) */}
+            {multiplayer && (
+                <canvas
+                    ref={canvasRefOpponent}
+                    width={OPPONENT_CANVAS_WIDTH}
+                    height={OPPONENT_CANVAS_HEIGHT}
+                    style={{
+                        border: '1px solid black',
+                        backgroundColor: 'white',
+                        pointerEvents: 'none'
+                    }}
+                />
+            )}
+
+            {/* Prediction Display */}
+            <PredictionDisplay predictionData={gameLogic.predictionData} />
         </div>
-    )
+    );
 }
