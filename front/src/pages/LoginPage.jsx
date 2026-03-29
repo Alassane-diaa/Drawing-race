@@ -12,9 +12,7 @@ export default function LoginPage() {
         try {
             const data = await authService.login(user.username, user.password);
             login(data.token, { username: user.username });
-            setMessage("Logged in! Token: " + data.token);
             
-            // Navigate to original page (e.g., /stats) or /login as default
             if (location.state?.from?.pathname) {
                 navigate(location.state.from.pathname);
             } else {
@@ -22,11 +20,11 @@ export default function LoginPage() {
             }
         } catch (err) {
             console.error(err);
-            setMessage("Login failed: " + err.message);
+            setMessage("Login failed.");
         }
     };
 
-    const loginUserFn = (user, login, setMessage) => {
+    const loginUserFn = (user, setMessage) => {
         handleLogin(user, setMessage);
     };
 

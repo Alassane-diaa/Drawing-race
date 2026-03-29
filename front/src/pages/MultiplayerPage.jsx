@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 // Services
 import {
     createGame,
+    getGameState,
     joinGame,
     joinRandomGame,
     markPlayerReady
@@ -27,6 +28,60 @@ export default function MultiplayerPage() {
     const [error, setError] = useState('');
     const [gameIdInput, setGameIdInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+
+    // If a valid lobby session already exists, go directly back to /game
+    useEffect(() => {
+        if (!isUser || !user?.username) {
+            return;
+        }
+
+        let isCancelled = false;
+
+        const restoreExistingLobby = async () => {
+            let parsedSession = null;
+            try {
+                const rawSession = localStorage.getItem(MULTIPLAYER_SESSION_KEY);
+                parsedSession = rawSession ? JSON.parse(rawSession) : null;
+            } catch {
+                localStorage.removeItem(MULTIPLAYER_SESSION_KEY);
+                return;
+            }
+
+            if (!parsedSession?.multiplayer || !parsedSession?.gameId || !parsedSession?.playerName) {
+                return;
+            }
+
+            if (parsedSession.playerName !== user.username) {
+                localStorage.removeItem(MULTIPLAYER_SESSION_KEY);
+                return;
+            }
+
+            try {
+                const currentGame = await getGameState(parsedSession.gameId);
+                if (isCancelled) {
+                    return;
+                }
+
+                navigate('/game', {
+                    replace: true,
+                    state: {
+                        gameId: currentGame.gameId,
+                        playerName: user.username,
+                        multiplayer: true,
+                        gameState: currentGame,
+                    },
+                });
+            } catch {
+                localStorage.removeItem(MULTIPLAYER_SESSION_KEY);
+            }
+        };
+
+        restoreExistingLobby();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [isUser, user, navigate]);
 
     // Update welcome message when user changes
     useEffect(() => {
@@ -98,6 +153,7 @@ export default function MultiplayerPage() {
             setIsLoading(true);
             const createdGame = await createGame(user.username);
             setGame(createdGame);
+            redirectToGame(createdGame);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -121,10 +177,7 @@ export default function MultiplayerPage() {
             setIsLoading(true);
             const joinedGame = await joinGame(gameIdInput, user.username);
             setGame(joinedGame);
-
-            if (joinedGame.status === 'IN_PROGRESS') {
-                redirectToGame(joinedGame);
-            }
+            redirectToGame(joinedGame);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -143,10 +196,7 @@ export default function MultiplayerPage() {
             setIsLoading(true);
             const joinedGame = await joinRandomGame(user.username);
             setGame(joinedGame);
-
-            if (joinedGame.status === 'IN_PROGRESS') {
-                redirectToGame(joinedGame);
-            }
+            redirectToGame(joinedGame);
         } catch (err) {
             setError(err.message);
         } finally {

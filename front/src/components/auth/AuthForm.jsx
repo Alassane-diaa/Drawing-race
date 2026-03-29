@@ -5,12 +5,9 @@ export default function AuthForm({ title, buttonText, auth_fn }) {
     const [message, setMessage] = useState("");
 
     const setMessageFn = (msg) => setMessage(msg);
-    
-    // auth_fn expects (user, login, setMessage)
-    // but we're now passing login directly in the page component
-    // so we need to adapt this
+
     const handleSubmit = () => {
-        auth_fn(user, null, setMessageFn);
+        auth_fn(user, setMessageFn);
     };
 
     return (

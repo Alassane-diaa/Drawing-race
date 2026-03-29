@@ -1,12 +1,14 @@
 ﻿import { useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 // Services
 import {
     getGameState,
     markPlayerReady,
     markPlayerNotReady,
-    startGame as startMultiplayerGame
+    startGame as startMultiplayerGame,
+    leaveLobby,
+    deleteLobby
 } from '../services/gameService';
 import {
     splitPointsIntoStrokes,
@@ -31,6 +33,7 @@ const OPPONENT_CANVAS_HEIGHT = 300;
 const MULTIPLAYER_SESSION_KEY = 'multiplayerSession';
 
 export default function GamePage() {
+    const navigate = useNavigate();
     const canvasRef = useRef(null);
     const canvasRefOpponent = useRef(null);
     const opponentStrokesRef = useRef([]);
@@ -57,6 +60,7 @@ export default function GamePage() {
     // Local state
     const [gameReady, setGameReady] = useState(!multiplayer || initialGameState?.status === 'STARTED');
     const [gameState, setGameState] = useState(initialGameState);
+    const [errorMessage, setErrorMessage] = useState('');
 
     // Save multiplayer session
     useEffect(() => {
@@ -142,12 +146,23 @@ export default function GamePage() {
     }
 
     function handleGameEvent(gameEvent) {
+        setErrorMessage('');
         if (gameEvent.type === 'GAME_STARTED') {
             setGameReady(true);
+        }
+
+        if (gameEvent.type === 'GAME_DELETED') {
+            try {
+                localStorage.removeItem(MULTIPLAYER_SESSION_KEY);
+            } catch (error) {
+                console.warn('Unable to clear multiplayer session:', error);
+            }
+            navigate('/play');
         }
     }
 
     function handleGameStateChanged(state) {
+        setErrorMessage('');
         setGameState(state);
         if (state.status === 'STARTED') {
             setGameReady(true);
@@ -191,10 +206,11 @@ export default function GamePage() {
         if (!multiplayer || !gameId) return;
 
         try {
+            setErrorMessage('');
             const updatedGame = await markPlayerReady(gameId, playerName);
             setGameState(updatedGame);
         } catch (error) {
-            alert(`Failed to mark as ready: ${error.message}`);
+            setErrorMessage(`Failed to mark as ready: ${error.message}`);
         }
     }
 
@@ -202,10 +218,11 @@ export default function GamePage() {
         if (!multiplayer || !gameId) return;
 
         try {
+            setErrorMessage('');
             const updatedGame = await markPlayerNotReady(gameId, playerName);
             setGameState(updatedGame);
         } catch (error) {
-            alert(`Failed to mark as not ready: ${error.message}`);
+            setErrorMessage(`Failed to mark as not ready: ${error.message}`);
         }
     }
 
@@ -213,9 +230,36 @@ export default function GamePage() {
         if (!multiplayer || !gameId) return;
 
         try {
+            setErrorMessage('');
             await startMultiplayerGame(gameId, playerName);
         } catch (error) {
-            alert(`Cannot start game: ${error.message}`);
+            setErrorMessage(`Cannot start game: ${error.message}`);
+        }
+    }
+
+    async function handleLeaveLobby() {
+        if (!multiplayer || !gameId || !playerName) return;
+
+        try {
+            setErrorMessage('');
+            await leaveLobby(gameId, playerName);
+            localStorage.removeItem(MULTIPLAYER_SESSION_KEY);
+            navigate('/play');
+        } catch (error) {
+            setErrorMessage(`Cannot leave lobby: ${error.message}`);
+        }
+    }
+
+    async function handleDeleteLobby() {
+        if (!multiplayer || !gameId || !playerName) return;
+
+        try {
+            setErrorMessage('');
+            await deleteLobby(gameId, playerName);
+            localStorage.removeItem(MULTIPLAYER_SESSION_KEY);
+            navigate('/play');
+        } catch (error) {
+            setErrorMessage(`Cannot delete lobby: ${error.message}`);
         }
     }
 
@@ -224,6 +268,12 @@ export default function GamePage() {
     return (
         <div className="game-page">
             <h1>Quick, Draw!</h1>
+
+            {errorMessage && (
+                <div className="error-message">
+                    <p>{errorMessage}</p>
+                </div>
+            )}
 
             {/* Category Display */}
             <div className="category-display">
@@ -242,10 +292,13 @@ export default function GamePage() {
             {multiplayer && gameState && !gameReady && (
                 <ReadyUpUI
                     gameState={gameState}
+                    gameId={gameId}
                     playerName={playerName}
                     onMarkReady={handleMarkReady}
                     onMarkNotReady={handleMarkNotReady}
                     onStartGame={handleStartGame}
+                    onLeaveLobby={handleLeaveLobby}
+                    onDeleteLobby={handleDeleteLobby}
                 />
             )}
 

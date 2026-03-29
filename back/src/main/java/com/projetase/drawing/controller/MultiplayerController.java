@@ -95,6 +95,28 @@ public class MultiplayerController {
         return ResponseEntity.ok(gameView);
     }
 
+    @PostMapping("/{gameId}/leave")
+    public ResponseEntity<GameView> leaveLobby(@PathVariable String gameId, @RequestBody CreateGameRequest request) {
+        log.info("leave lobby request: gameId={}, playerName={}", gameId, request.getPlayerName());
+        Game game = gameService.leaveLobby(gameId, request.getPlayerName());
+        GameView gameView = GameView.from(game);
+
+        simpMessagingTemplate.convertAndSend("/topic/game/" + gameId + "/state", gameView);
+        GameEvent leaveEvent = GameEvent.player2Left(gameId, request.getPlayerName(), game.getPlayer1Name());
+        simpMessagingTemplate.convertAndSend("/topic/game/" + gameId + "/event", leaveEvent);
+
+        return ResponseEntity.ok(gameView);
+    }
+
+    @PostMapping("/{gameId}/delete")
+    public ResponseEntity<Void> deleteLobby(@PathVariable String gameId, @RequestBody CreateGameRequest request) {
+        log.info("delete lobby request: gameId={}, playerName={}", gameId, request.getPlayerName());
+        Game deletedGame = gameService.deleteLobby(gameId, request.getPlayerName());
+        GameEvent deleteEvent = GameEvent.gameDeleted(gameId, deletedGame.getPlayer1Name());
+        simpMessagingTemplate.convertAndSend("/topic/game/" + gameId + "/event", deleteEvent);
+        return ResponseEntity.noContent().build();
+    }
+
     private void publishStateAndReadyEvent(Game game, GameView gameView) {
         simpMessagingTemplate.convertAndSend("/topic/game/" + game.getId() + "/state", gameView);
 

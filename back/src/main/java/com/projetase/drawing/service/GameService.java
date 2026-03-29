@@ -7,11 +7,14 @@ import org.springframework.stereotype.Service;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 public class GameService {
+	private static final int GAME_ID_MIN = 10_000;
+	private static final int GAME_ID_MAX_EXCLUSIVE = 1_000_000;
+	private static final int GAME_ID_GENERATION_MAX_ATTEMPTS = 1_000;
 
 	private final Map<String, Game> games = new ConcurrentHashMap<>();
 
@@ -19,7 +22,7 @@ public class GameService {
 		String normalizedPlayerName = normalizePlayerName(playerName);
 
 		Game game = Game.builder()
-				.id(UUID.randomUUID().toString())
+				.id(generateShortGameId())
 				.player1Name(normalizedPlayerName)
 				.player1Ready(true)
 				.status(GameStatus.WAITING)
@@ -158,11 +161,59 @@ public class GameService {
 		return game;
 	}
 
+	public Game leaveLobby(String gameId, String playerName) {
+		String normalizedPlayerName = normalizePlayerName(playerName);
+		Game game = games.get(gameId);
+		if (game == null) {
+			throw new GameException("GAME_NOT_FOUND", "Partie introuvable: " + gameId);
+		}
+
+		if (GameStatus.STARTED.equals(game.getStatus())) {
+			throw new GameException("GAME_ALREADY_STARTED", "Impossible de quitter: la partie a deja commence");
+		}
+
+		if (!normalizedPlayerName.equals(game.getPlayer2Name())) {
+			throw new GameException("ONLY_PLAYER2_CAN_LEAVE", "Seul le joueur 2 peut quitter le lobby");
+		}
+
+		game.setPlayer2Name(null);
+		game.setPlayer2Ready(false);
+		game.setStatus(GameStatus.WAITING);
+		return game;
+	}
+
+	public Game deleteLobby(String gameId, String playerName) {
+		String normalizedPlayerName = normalizePlayerName(playerName);
+		Game game = games.get(gameId);
+		if (game == null) {
+			throw new GameException("GAME_NOT_FOUND", "Partie introuvable: " + gameId);
+		}
+
+		if (!normalizedPlayerName.equals(game.getPlayer1Name())) {
+			throw new GameException("ONLY_HOST_CAN_DELETE", "Seul l'hote peut supprimer le lobby");
+		}
+
+		games.remove(gameId);
+		return game;
+	}
+
 	private String normalizePlayerName(String playerName) {
 		if (playerName == null || playerName.isBlank()) {
 			throw new GameException("INVALID_PLAYER", "playerName est obligatoire");
 		}
 
 		return playerName.trim();
+	}
+
+	private String generateShortGameId() {
+		for (int attempt = 0; attempt < GAME_ID_GENERATION_MAX_ATTEMPTS; attempt++) {
+			int value = ThreadLocalRandom.current().nextInt(GAME_ID_MIN, GAME_ID_MAX_EXCLUSIVE);
+			String gameId = Integer.toString(value);
+			if (!games.containsKey(gameId)) {
+				return gameId;
+			}
+		}
+
+		throw new GameException("GAME_ID_GENERATION_FAILED", "Impossible de generer un id de partie unique");
 	}
 }
