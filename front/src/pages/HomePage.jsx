@@ -1,6 +1,7 @@
 import {Link} from "react-router-dom";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import icon from "../resources/images/iconeV1.png";
 
 export default function HomePage() {
     const [difficulty, setDifficulty] = useState("medium");
