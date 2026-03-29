@@ -3,7 +3,7 @@
  * Displays the ready-up interface for multiplayer games
  */
 
-export default function ReadyUpUI({ gameState, playerName, onMarkReady, onMarkNotReady, onStartGame }) {
+export default function ReadyUpUI({ gameState, gameId, playerName, onMarkReady, onMarkNotReady, onStartGame, onLeaveLobby, onDeleteLobby }) {
     if (!gameState || !['WAITING', 'IN_PROGRESS'].includes(gameState.status)) {
         return null;
     }
@@ -13,10 +13,11 @@ export default function ReadyUpUI({ gameState, playerName, onMarkReady, onMarkNo
     const player1Ready = gameState.player1Ready;
     const player2Ready = gameState.player2Ready;
     const bothPlayersReady = player1Ready && player2Ready && gameState.player2Name;
+    const displayedGameId = gameState.gameId || gameId;
 
     return (
         <div className="ready-up-container">
-            <h3>Ready Up! (Game: {gameState.status})</h3>
+            <h3>Ready Up! (Game #{displayedGameId} - {gameState.status})</h3>
             
             <div className="players-status">
                 <div className="player-status">
@@ -56,6 +57,18 @@ export default function ReadyUpUI({ gameState, playerName, onMarkReady, onMarkNo
                 {isPlayer1 && bothPlayersReady && (
                     <button onClick={onStartGame} className="btn-start-game">
                         Start Game
+                    </button>
+                )}
+
+                {isPlayer2 && (
+                    <button onClick={onLeaveLobby} className="btn-unready">
+                        Leave Lobby
+                    </button>
+                )}
+
+                {isPlayer1 && (
+                    <button onClick={onDeleteLobby} className="btn-unready">
+                        Delete Lobby
                     </button>
                 )}
             </div>

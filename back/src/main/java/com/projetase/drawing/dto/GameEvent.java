@@ -41,5 +41,25 @@ public class GameEvent {
                 .timestamp(System.currentTimeMillis())
                 .build();
     }
+
+    public static GameEvent player2Left(String gameId, String playerName, String targetPlayerName) {
+        return GameEvent.builder()
+                .type("PLAYER2_LEFT")
+                .gameId(gameId)
+                .status("WAITING")
+                .joinedPlayerName(playerName)
+                .targetPlayerName(targetPlayerName)
+                .timestamp(System.currentTimeMillis())
+                .build();
+    }
+
+    public static GameEvent gameDeleted(String gameId, String hostName) {
+        return GameEvent.builder()
+                .type("GAME_DELETED")
+                .gameId(gameId)
+                .joinedPlayerName(hostName)
+                .timestamp(System.currentTimeMillis())
+                .build();
+    }
 }
 
