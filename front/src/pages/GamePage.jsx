@@ -29,8 +29,8 @@ import PredictionDisplay from '../components/PredictionDisplay';
 // Constants
 //const MAIN_CANVAS_WIDTH = 800;
 //const MAIN_CANVAS_HEIGHT = 600;
-const OPPONENT_CANVAS_WIDTH = 400;
-const OPPONENT_CANVAS_HEIGHT = 300;
+//const OPPONENT_CANVAS_WIDTH = 400;
+//const OPPONENT_CANVAS_HEIGHT = 300;
 const MULTIPLAYER_SESSION_KEY = 'multiplayerSession';
 
 export default function GamePage() {
@@ -379,9 +379,11 @@ export default function GamePage() {
                 {multiplayer && (
                     <canvas className = "opponentCanvas"
                         ref={canvasRefOpponent}
-                        width={OPPONENT_CANVAS_WIDTH}
-                        height={OPPONENT_CANVAS_HEIGHT}
+                        width={dimensions.width/2}
+                        height={dimensions.height/2}
                         style={{
+                            width: `${dimensions.width/2}px`,
+                            height: `${dimensions.height/2}px`,
                             border: '1px solid black',
                             backgroundColor: 'white',
                             pointerEvents: 'none'
