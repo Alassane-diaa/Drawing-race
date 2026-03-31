@@ -27,10 +27,10 @@ import GameTools from '../components/GameTools';
 import PredictionDisplay from '../components/PredictionDisplay';
 
 // Constants
-const MAIN_CANVAS_WIDTH = 800;
-const MAIN_CANVAS_HEIGHT = 600;
-const OPPONENT_CANVAS_WIDTH = 400;
-const OPPONENT_CANVAS_HEIGHT = 300;
+//const MAIN_CANVAS_WIDTH = 800;
+//const MAIN_CANVAS_HEIGHT = 600;
+//const OPPONENT_CANVAS_WIDTH = 400;
+//const OPPONENT_CANVAS_HEIGHT = 300;
 const MULTIPLAYER_SESSION_KEY = 'multiplayerSession';
 
 export default function GamePage() {
@@ -38,6 +38,27 @@ export default function GamePage() {
     const canvasRef = useRef(null);
     const canvasRefOpponent = useRef(null);
     const opponentStrokesRef = useRef([]);
+    const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+
+    useEffect(() => {
+        function redimensionner() {
+        // On veut que le canvas fasse 40% de la largeur de la fenêtre
+        // mais on garde une taille max ET un ratio pour ne pas tout casser
+        const nouvelleLargeur = Math.min(window.innerWidth * 0.4, 800);
+        const nouvelleHauteur = (nouvelleLargeur * 3) / 4;
+
+        setDimensions({
+            width: nouvelleLargeur,
+            height: nouvelleHauteur
+        });
+        }
+
+    // On appelle quand il faut j'espère
+    window.addEventListener('resize', redimensionner);
+    redimensionner();
+
+    return () => window.removeEventListener('resize', redimensionner);
+    }, []);
 
     // Location state
     const location = useLocation();
@@ -340,9 +361,14 @@ export default function GamePage() {
                 {/* Main Canvas */}
                 <canvas className="mainCanvas"
                     ref={canvasRef}
-                    width={MAIN_CANVAS_WIDTH}
-                    height={MAIN_CANVAS_HEIGHT}
-                    style={{ border: '1px solid black', backgroundColor: 'white' }}
+                    width={dimensions.width}
+                    height={dimensions.height}
+                    style={{
+                        width: `${dimensions.width}px`,
+                        height: `${dimensions.height}px`,
+                        border: '1px solid black',
+                        backgroundColor: 'white'
+                    }}
                     onClick={drawingControl.onClickCanvas}
                     onMouseDown={drawingControl.onMouseDownCanvas}
                     onMouseMove={drawingControl.handleMouseMoveCanvas}
@@ -353,9 +379,11 @@ export default function GamePage() {
                 {multiplayer && (
                     <canvas className = "opponentCanvas"
                         ref={canvasRefOpponent}
-                        width={OPPONENT_CANVAS_WIDTH}
-                        height={OPPONENT_CANVAS_HEIGHT}
+                        width={dimensions.width/2}
+                        height={dimensions.height/2}
                         style={{
+                            width: `${dimensions.width/2}px`,
+                            height: `${dimensions.height/2}px`,
                             border: '1px solid black',
                             backgroundColor: 'white',
                             pointerEvents: 'none'
