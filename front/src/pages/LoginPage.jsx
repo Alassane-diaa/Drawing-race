@@ -8,17 +8,24 @@ export default function LoginPage() {
     const navigate = useNavigate();
     const location = useLocation();
     const { login } = useAuth();
+
+    const getSafeReturnPath = () => {
+        const fromPath = location.state?.from?.pathname;
+        const forbiddenPaths = ['/', '/login', '/register'];
+
+        if (!fromPath || forbiddenPaths.includes(fromPath)) {
+            return '/home';
+        }
+
+        return fromPath;
+    };
     
     const handleLogin = async (user, setMessage) => {
         try {
             const data = await authService.login(user.username, user.password);
             login(data.token, { username: user.username });
-            
-            if (location.state?.from?.pathname) {
-                navigate(location.state.from.pathname);
-            } else {
-                navigate('/');
-            }
+
+            navigate(getSafeReturnPath(), { replace: true });
         } catch (err) {
             console.error(err);
             setMessage("Login failed.");
@@ -35,7 +42,7 @@ export default function LoginPage() {
                 <AuthForm title="Login" buttonText="Sign In" auth_fn={loginUserFn} />
             </div>
             <div className="footer">
-                No account? Create an account here: <Link to="/register" state={{ from: location.state?.from || location }}>Register</Link>
+                No account? Create an account here: <Link to="/register" state={{ from: location.state?.from || { pathname: '/home' } }}>Register</Link>
             </div>
         </div>
     );
