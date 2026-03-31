@@ -1,0 +1,189 @@
+/* ─── Rainbow animation ───────────────────────────────────────────────────── */
+@keyframes rainbowSpin {
+    0%   { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ─── Badge image ─────────────────────────────────────────────────────────── */
+.imagebadge {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 4px;
+    box-sizing: border-box;
+    border-radius: inherit;
+    transition: opacity 0.2s ease;
+}
+
+/* ─── Badge container hover ───────────────────────────────────────────────── */
+.badgeContainer {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    cursor: pointer;
+}
+
+.badgeContainer:hover {
+    transform: scale(1.1);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* ─── Badge verrouillé ────────────────────────────────────────────────────── */
+.badgeLocked .imagebadge {
+    opacity: 0.25;
+    filter: grayscale(100%);
+}
+
+.badgeLockOverlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    pointer-events: none;
+    border-radius: inherit;
+}
+
+/* ─── Badge débloqué ──────────────────────────────────────────────────────── */
+.badgeUnlocked .imagebadge {
+    opacity: 1;
+    filter: none;
+}
+
+/* ─── Bouton invisible par-dessus le badge ────────────────────────────────── */
+.buttonBadge {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    left: 0;
+    top: 0;
+    height: 100%;
+    object-fit: contain;
+    border-radius: inherit;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+}
+
+/* ─── Modal overlay ───────────────────────────────────────────────────────── */
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(3px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: overlayFadeIn 0.2s ease;
+}
+
+@keyframes overlayFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* ─── Modal carte ─────────────────────────────────────────────────────────── */
+.modalCard {
+    position: relative;
+    background: #fff;
+    border-radius: 16px;
+    padding: 2.5rem 2rem 2rem;
+    width: min(360px, 90vw);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+    animation: cardSlideUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes cardSlideUp {
+    from { transform: translateY(24px) scale(0.96); opacity: 0; }
+    to   { transform: translateY(0)    scale(1);    opacity: 1; }
+}
+
+/* Badge débloqué : bordure colorée */
+.modalCardUnlocked {
+    border: 2px solid #4caf50;
+}
+
+/* Badge verrouillé : grisé */
+.modalCardLocked {
+    border: 2px solid #ccc;
+    background: #f8f8f8;
+}
+
+/* ─── Bouton fermeture ────────────────────────────────────────────────────── */
+.modalCloseBtn {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    background: none;
+    border: none;
+    font-size: 1rem;
+    color: #888;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0.25rem 0.4rem;
+    border-radius: 50%;
+    transition: background 0.15s, color 0.15s;
+}
+
+.modalCloseBtn:hover {
+    background: #eee;
+    color: #333;
+}
+
+/* ─── Icône dans le modal ─────────────────────────────────────────────────── */
+.modalIcon {
+    width: 90px;
+    height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+}
+
+.modalBadgeImg {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.modalLockIcon {
+    font-size: 3rem;
+    filter: grayscale(1);
+    opacity: 0.4;
+}
+
+/* ─── Textes du modal ─────────────────────────────────────────────────────── */
+.modalBadgeName {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    text-align: center;
+    color: #111;
+}
+
+.modalCardLocked .modalBadgeName {
+    color: #888;
+}
+
+.modalBadgeDesc {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #555;
+    text-align: center;
+    line-height: 1.5;
+}
+
+/* ─── Tag "Débloqué" ──────────────────────────────────────────────────────── */
+.modalUnlockedTag {
+    margin-top: 0.5rem;
+    background: #e8f5e9;
+    color: #388e3c;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+}

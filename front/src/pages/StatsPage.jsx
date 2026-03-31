@@ -1,13 +1,32 @@
 import { useAuth } from '../hooks/useAuth';
 import { useEffect, useState } from 'react';
 import { userService } from '../services/userService';
+import imageBadge from '../images/badgeDefaut.png';
+import "./StatsPage.css";
 
+// ─── Données hardcodées en attendant le backend ───────────────────────────────
+const BADGES_DATA = Array.from({ length: 50 }, (_, i) => ({
+    id: i + 1,
+    name: `Badge #${i + 1}`,
+    description: `Description du badge numéro ${i + 1}. Condition de déblocage à renseigner.`,
+}));
+
+// IDs débloqués — sera remplacé par un appel userService.getMyBadges(token)
+const MOCK_UNLOCKED_IDS = new Set([1, 3, 5, 7, 12, 20]);
+
+// ─── Page principale ──────────────────────────────────────────────────────────
 export default function StatsPage() {
     const { token, isUser, isLoading } = useAuth();
-    const [stats, setStats] = useState(null);
-    const [leaderboard, setLeaderboard] = useState(null);
-    const [error, setError] = useState(null);
+    const [stats, setStats]               = useState(null);
+    const [leaderboard, setLeaderboard]   = useState(null);
+    const [error, setError]               = useState(null);
     const [rainbowActive, setRainbowActive] = useState(false);
+
+    // État du modal badge
+    const [selectedBadgeId, setSelectedBadgeId] = useState(null);
+
+    // IDs débloqués — remplacer MOCK_UNLOCKED_IDS par l'appel API quand dispo
+    const [unlockedIds, setUnlockedIds] = useState(MOCK_UNLOCKED_IDS);
 
     useEffect(() => {
         if (!isUser) return;
@@ -15,10 +34,15 @@ export default function StatsPage() {
         userService.getMyStats(token)
             .then(data => setStats(data))
             .catch(err => setError(err.message));
-        
+
         userService.getLeaderboard()
             .then(data => setLeaderboard(data))
             .catch(err => console.warn("Leaderboard:", err.message));
+
+        // TODO : remplacer MOCK_UNLOCKED_IDS par :
+        // userService.getMyBadges(token)
+        //     .then(ids => setUnlockedIds(new Set(ids)))
+        //     .catch(err => console.warn("Badges:", err.message));
 
     }, [isUser, token]);
 
@@ -27,148 +51,191 @@ export default function StatsPage() {
     if (error)      return <p>Erreur : {error}</p>;
     if (!stats)     return <p>Chargement des stats...</p>;
 
-    const canActivate = stats.wins > -1;
-
-    // ... (imports et logique du composant identiques)
+    const canActivate    = stats.wins > -1;
+    const selectedBadge  = BADGES_DATA.find(b => b.id === selectedBadgeId) ?? null;
+    const selectedUnlocked = selectedBadgeId ? unlockedIds.has(selectedBadgeId) : false;
 
     return (
-        <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: '1fr auto 1fr', 
-            gap: '4rem', 
-            alignItems: 'start', 
-            padding: '2rem',
-            width: '100%',
-            boxSizing: 'border-box'
-        }}>
-            
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <div style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    maxHeight: '400px',
-                    width: '300px', 
-                    backgroundColor: '#fff', 
-                    borderRadius: '8px', 
-                    padding: '1rem',
-                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                }}>
-                    <h3 style={{ marginTop: 0, marginBottom: '1rem', textAlign: 'center' }}>Le Leaderboard</h3>
-                    
-                    <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: '40px 1fr 60px', 
-                        fontWeight: 'bold', 
-                        borderBottom: '2px solid #eee', 
-                        paddingBottom: '0.5rem', 
-                        marginBottom: '0.5rem' 
-                    }}>
-                        <span>#</span>
-                        <span>Joueur</span>
-                        <span style={{ textAlign: 'right' }}>Score</span>
-                    </div>
+        <>
+            {/* ── Modal badge ── */}
+            {selectedBadge && (
+                <BadgeModal
+                    badge={selectedBadge}
+                    unlocked={selectedUnlocked}
+                    onClose={() => setSelectedBadgeId(null)}
+                />
+            )}
 
-        
-                    <div style={{ 
-                        overflowY: 'auto', 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        gap: '0.75rem', 
-                        paddingRight: '0.5rem' 
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr auto 1fr',
+                gap: '4rem',
+                alignItems: 'start',
+                padding: '2rem',
+                width: '100%',
+                boxSizing: 'border-box'
+            }}>
+
+                {/* ── Leaderboard ── */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        maxHeight: '400px',
+                        width: '300px',
+                        backgroundColor: '#fff',
+                        borderRadius: '8px',
+                        padding: '1rem',
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
                     }}>
-                                        {leaderboard === null ? (
-                        <p>Chargement...</p>
-                    ) : (
-                        leaderboard.map((player, index) => (
-                            <div key={player.id} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 60px', alignItems: 'center' }}>
-                                <span style={{ 
-                                    fontWeight: 'bold',
-                                    color: index === 0 ? '#ffb703' : index === 1 ? '#888' : index === 2 ? '#cd7f32' : '#000'
-                                }}>
-                                    {index + 1}
-                                </span>
-                                <span>{player.username}</span>
-                                <span style={{ textAlign: 'right', fontWeight: 500 }}>{player.wins}</span>
-                            </div>
-                        ))
-                    )}
+                        <h3 style={{ marginTop: 0, marginBottom: '1rem', textAlign: 'center' }}>Le Leaderboard</h3>
+
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: '40px 1fr 60px',
+                            fontWeight: 'bold',
+                            borderBottom: '2px solid #eee',
+                            paddingBottom: '0.5rem',
+                            marginBottom: '0.5rem'
+                        }}>
+                            <span>#</span>
+                            <span>Joueur</span>
+                            <span style={{ textAlign: 'right' }}>Score</span>
+                        </div>
+
+                        <div style={{
+                            overflowY: 'auto',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.75rem',
+                            paddingRight: '0.5rem'
+                        }}>
+                            {leaderboard === null ? (
+                                <p>Chargement...</p>
+                            ) : (
+                                leaderboard.map((player, index) => (
+                                    <div key={player.id} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 60px', alignItems: 'center' }}>
+                                        <span style={{
+                                            fontWeight: 'bold',
+                                            color: index === 0 ? '#ffb703' : index === 1 ? '#888' : index === 2 ? '#cd7f32' : '#000'
+                                        }}>
+                                            {index + 1}
+                                        </span>
+                                        <span>{player.username}</span>
+                                        <span style={{ textAlign: 'right', fontWeight: 500 }}>{player.wins}</span>
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div style={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                alignItems: 'center', 
-                gap: '2rem'
-            }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{ position: 'relative', width: 108, height: 108, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        
-                        {!rainbowActive && (
-                            <div style={{
-                                position: 'absolute', inset: -4,
-                                borderRadius: '50%',
-                                border: '3px solid rgba(0,0,0,0.15)',
-                            }} />
-                        )}
+                {/* ── Centre : avatar + stats + bouton ── */}
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '2rem'
+                }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{ position: 'relative', width: 108, height: 108, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
 
-                        {rainbowActive && (
-                            <>
+                            {!rainbowActive && (
                                 <div style={{
                                     position: 'absolute', inset: -4,
                                     borderRadius: '50%',
-                                    background: 'linear-gradient(90deg, #ff0080, #ff8c00, #ffe100, #00ff80, #00cfff, #a020f0, #ff0080)',
-                                    backgroundSize: '200% 200%',
-                                    animation: 'rainbowSpin 2s linear infinite',
+                                    border: '3px solid rgba(0,0,0,0.15)',
                                 }} />
-                                <div style={{
-                                    position: 'absolute', inset: 3,
-                                    borderRadius: '50%',
-                                    background: 'white',
-                                }} />
-                            </>
-                        )}
+                            )}
 
-                        <img
-                            src={stats.avatarFilename
-                                ? `http://localhost:8080/user/avatar/${stats.avatarFilename}`
-                                : '/default-avatar.png'}
-                            alt="Photo de profil"
-                            style={{
-                                position: 'relative', zIndex: 2,
-                                width: 100, height: 100,
-                                borderRadius: '50%',
-                                objectFit: 'cover',
-                            }}
-                        />
+                            {rainbowActive && (
+                                <>
+                                    <div style={{
+                                        position: 'absolute', inset: -4,
+                                        borderRadius: '50%',
+                                        background: 'linear-gradient(90deg, #ff0080, #ff8c00, #ffe100, #00ff80, #00cfff, #a020f0, #ff0080)',
+                                        backgroundSize: '200% 200%',
+                                        animation: 'rainbowSpin 2s linear infinite',
+                                    }} />
+                                    <div style={{
+                                        position: 'absolute', inset: 3,
+                                        borderRadius: '50%',
+                                        background: 'white',
+                                    }} />
+                                </>
+                            )}
+
+                            <img
+                                src={stats.avatarFilename
+                                    ? `http://localhost:8080/user/avatar/${stats.avatarFilename}`
+                                    : '/default-avatar.png'}
+                                alt="Photo de profil"
+                                style={{
+                                    position: 'relative', zIndex: 2,
+                                    width: 100, height: 100,
+                                    borderRadius: '50%',
+                                    objectFit: 'cover',
+                                }}
+                            />
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                        <StatCard label="Parties"   value={stats.gamesPlayed} />
+                        <StatCard label="Victoires" value={stats.wins} />
+                        <StatCard label="Précision" value={`${stats.accuracy}%`} />
+                    </div>
+
+                    <button
+                        onClick={() => setRainbowActive(v => !v)}
+                        disabled={!canActivate}
+                        style={{ opacity: canActivate ? 1 : 0.4, cursor: canActivate ? 'pointer' : 'not-allowed' }}
+                    >
+                        {rainbowActive ? '✦ Désactiver le liseré' : '✦ Activer le liseré champion'}
+                    </button>
+                </div>
+
+                {/* ── Badges ── */}
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'flex-start',
+                    flexDirection: 'column',
+                    maxHeight: '400px',
+                    width: '300px',
+                    backgroundColor: '#fff',
+                    borderRadius: '8px',
+                    padding: '1rem',
+                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                }}>
+                    <h3 style={{ marginTop: 0 }}>Badges</h3>
+
+                    <div style={{
+                        display: 'grid',
+                        padding: '10px',
+                        gap: '10px',
+                        gridTemplateColumns: 'auto auto auto',
+                        overflowY: 'auto',
+                        overflowX: 'hidden',
+                        boxSizing: 'border-box',
+                        flex: 1
+                    }}>
+                        {BADGES_DATA.map(badge => (
+                            <BadgeItem
+                                key={badge.id}
+                                badge={badge}
+                                unlocked={unlockedIds.has(badge.id)}
+                                onSelect={setSelectedBadgeId}
+                            />
+                        ))}
                     </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px' }}>
-                    <StatCard label="Parties"   value={stats.gamesPlayed} />
-                    <StatCard label="Victoires" value={stats.wins} />
-                    <StatCard label="Précision" value={`${stats.accuracy}%`} />
-                </div>
-
-                <button
-                    onClick={() => setRainbowActive(v => !v)}
-                    disabled={!canActivate}
-                    style={{ opacity: canActivate ? 1 : 0.4, cursor: canActivate ? 'pointer' : 'not-allowed' }}
-                >
-                    {rainbowActive ? '✦ Désactiver le liseré' : '✦ Activer le liseré champion'}
-                </button>
             </div>
-                            
-            <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-                <p style={{ marginTop: 0 }}>Badges</p>
-            </div>                
-
-        </div>
+        </>
     );
 }
 
-
+// ─── StatCard ─────────────────────────────────────────────────────────────────
 function StatCard({ label, value }) {
     return (
         <div style={{ background: '#f5f5f5', borderRadius: 8, padding: '1rem', textAlign: 'center' }}>
@@ -178,10 +245,78 @@ function StatCard({ label, value }) {
     );
 }
 
-function Badge({}) {
+// ─── BadgeItem ────────────────────────────────────────────────────────────────
+function BadgeItem({ badge, unlocked, onSelect }) {
     return (
-        <>
+        <div
+            className={`badgeContainer ${unlocked ? 'badgeUnlocked' : 'badgeLocked'}`}
+            style={{
+                border: '4px dotted red',
+                borderRadius: '30px',
+                aspectRatio: '1',
+                display: 'flex',
+                minWidth: 0,
+                position: 'relative',
+            }}
+        >
+            <button
+                className="buttonBadge"
+                onClick={() => onSelect(badge.id)}
+                aria-label={`Voir le badge ${badge.name}`}
+            />
 
-        </>
+            <img
+                src={imageBadge}
+                alt={badge.name}
+                className="imagebadge"
+            />
+
+            {/* Cadenas sur les badges verrouillés */}
+            {!unlocked && (
+                <div className="badgeLockOverlay">
+                    🔒
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── BadgeModal ───────────────────────────────────────────────────────────────
+function BadgeModal({ badge, unlocked, onClose }) {
+    // Fermeture avec Escape
+    useEffect(() => {
+        const handler = (e) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [onClose]);
+
+    return (
+        <div className="modalOverlay" onClick={onClose}>
+            <div
+                className={`modalCard ${unlocked ? 'modalCardUnlocked' : 'modalCardLocked'}`}
+                onClick={e => e.stopPropagation()}
+            >
+                <button className="modalCloseBtn" onClick={onClose} aria-label="Fermer">✕</button>
+
+                <div className="modalIcon">
+                    {unlocked
+                        ? <img src={imageBadge} alt={badge.name} className="modalBadgeImg" />
+                        : <span className="modalLockIcon">🔒</span>
+                    }
+                </div>
+
+                <h2 className="modalBadgeName">{badge.name}</h2>
+
+                <p className="modalBadgeDesc">
+                    {unlocked
+                        ? badge.description
+                        : 'Ce badge n\'est pas encore débloqué. Continue à jouer !'}
+                </p>
+
+                {unlocked && (
+                    <span className="modalUnlockedTag">✓ Débloqué</span>
+                )}
+            </div>
+        </div>
     );
 }
