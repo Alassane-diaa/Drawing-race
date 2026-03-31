@@ -4,60 +4,55 @@ import { userService } from '../services/userService';
 import imageBadge from '../images/badgeDefaut.png';
 import "./StatsPage.css";
 
-// ─── Données hardcodées en attendant le backend ───────────────────────────────
-const BADGES_DATA = Array.from({ length: 50 }, (_, i) => ({
-    id: i + 1,
-    name: `Badge #${i + 1}`,
-    description: `Description du badge numéro ${i + 1}. Condition de déblocage à renseigner.`,
-}));
-
-// IDs débloqués — sera remplacé par un appel userService.getMyBadges(token)
-const MOCK_UNLOCKED_IDS = new Set([1, 3, 5, 7, 12, 20]);
-
 // ─── Page principale ──────────────────────────────────────────────────────────
 export default function StatsPage() {
     const { token, isUser, isLoading } = useAuth();
-    const [stats, setStats]               = useState(null);
-    const [leaderboard, setLeaderboard]   = useState(null);
-    const [error, setError]               = useState(null);
+    const [stats, setStats]             = useState(null);
+    const [leaderboard, setLeaderboard] = useState(null);
+    const [error, setError]             = useState(null);
     const [rainbowActive, setRainbowActive] = useState(false);
 
-    // État du modal badge
+    // Badges : liste globale + set des ids débloqués
+    const [allBadges, setAllBadges]       = useState([]);
+    const [unlockedIds, setUnlockedIds]   = useState(new Set());
     const [selectedBadgeId, setSelectedBadgeId] = useState(null);
-
-    // IDs débloqués — remplacer MOCK_UNLOCKED_IDS par l'appel API quand dispo
-    const [unlockedIds, setUnlockedIds] = useState(MOCK_UNLOCKED_IDS);
 
     useEffect(() => {
         if (!isUser) return;
 
+        // Stats joueur
         userService.getMyStats(token)
             .then(data => setStats(data))
             .catch(err => setError(err.message));
 
+        // Leaderboard
         userService.getLeaderboard()
             .then(data => setLeaderboard(data))
             .catch(err => console.warn("Leaderboard:", err.message));
 
-        // TODO : remplacer MOCK_UNLOCKED_IDS par :
-        // userService.getMyBadges(token)
-        //     .then(ids => setUnlockedIds(new Set(ids)))
-        //     .catch(err => console.warn("Badges:", err.message));
+        // Liste globale des badges (sans auth)
+        userService.getAllBadges()
+            .then(data => setAllBadges(data))
+            .catch(err => console.warn("Badges:", err.message));
+
+        // Badges débloqués du joueur connecté
+        userService.getMyBadges(token)
+            .then(data => setUnlockedIds(new Set(data.map(b => b.id))))
+            .catch(err => console.warn("Mes badges:", err.message));
 
     }, [isUser, token]);
 
-    if (isLoading)  return <p>Chargement...</p>;
-    if (!isUser)    return <p>Connecte-toi pour voir tes stats.</p>;
-    if (error)      return <p>Erreur : {error}</p>;
-    if (!stats)     return <p>Chargement des stats...</p>;
+    if (isLoading)   return <p>Chargement...</p>;
+    if (!isUser)     return <p>Connecte-toi pour voir tes stats.</p>;
+    if (error)       return <p>Erreur : {error}</p>;
+    if (!stats)      return <p>Chargement des stats...</p>;
 
-    const canActivate    = stats.wins > -1;
-    const selectedBadge  = BADGES_DATA.find(b => b.id === selectedBadgeId) ?? null;
+    const canActivate   = stats.wins > -1;
+    const selectedBadge = allBadges.find(b => b.id === selectedBadgeId) ?? null;
     const selectedUnlocked = selectedBadgeId ? unlockedIds.has(selectedBadgeId) : false;
 
     return (
         <>
-            {/* ── Modal badge ── */}
             {selectedBadge && (
                 <BadgeModal
                     badge={selectedBadge}
@@ -209,25 +204,29 @@ export default function StatsPage() {
                 }}>
                     <h3 style={{ marginTop: 0 }}>Badges</h3>
 
-                    <div style={{
-                        display: 'grid',
-                        padding: '10px',
-                        gap: '10px',
-                        gridTemplateColumns: 'auto auto auto',
-                        overflowY: 'auto',
-                        overflowX: 'hidden',
-                        boxSizing: 'border-box',
-                        flex: 1
-                    }}>
-                        {BADGES_DATA.map(badge => (
-                            <BadgeItem
-                                key={badge.id}
-                                badge={badge}
-                                unlocked={unlockedIds.has(badge.id)}
-                                onSelect={setSelectedBadgeId}
-                            />
-                        ))}
-                    </div>
+                    {allBadges.length === 0 ? (
+                        <p style={{ color: '#aaa', textAlign: 'center' }}>Chargement...</p>
+                    ) : (
+                        <div style={{
+                            display: 'grid',
+                            padding: '10px',
+                            gap: '10px',
+                            gridTemplateColumns: 'auto auto auto',
+                            overflowY: 'auto',
+                            overflowX: 'hidden',
+                            boxSizing: 'border-box',
+                            flex: 1
+                        }}>
+                            {allBadges.map(badge => (
+                                <BadgeItem
+                                    key={badge.id}
+                                    badge={badge}
+                                    unlocked={unlockedIds.has(badge.id)}
+                                    onSelect={setSelectedBadgeId}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
 
             </div>
@@ -264,18 +263,13 @@ function BadgeItem({ badge, unlocked, onSelect }) {
                 onClick={() => onSelect(badge.id)}
                 aria-label={`Voir le badge ${badge.name}`}
             />
-
             <img
                 src={imageBadge}
                 alt={badge.name}
                 className="imagebadge"
             />
-
-            {/* Cadenas sur les badges verrouillés */}
             {!unlocked && (
-                <div className="badgeLockOverlay">
-                    🔒
-                </div>
+                <div className="badgeLockOverlay">🔒</div>
             )}
         </div>
     );
@@ -283,7 +277,6 @@ function BadgeItem({ badge, unlocked, onSelect }) {
 
 // ─── BadgeModal ───────────────────────────────────────────────────────────────
 function BadgeModal({ badge, unlocked, onClose }) {
-    // Fermeture avec Escape
     useEffect(() => {
         const handler = (e) => { if (e.key === 'Escape') onClose(); };
         window.addEventListener('keydown', handler);
@@ -308,9 +301,7 @@ function BadgeModal({ badge, unlocked, onClose }) {
                 <h2 className="modalBadgeName">{badge.name}</h2>
 
                 <p className="modalBadgeDesc">
-                    {unlocked
-                        ? badge.description
-                        : 'Ce badge n\'est pas encore débloqué. Continue à jouer !'}
+                    {unlocked ? badge.description : 'Ce badge n\'est pas encore débloqué. Continue à jouer !'}
                 </p>
 
                 {unlocked && (
