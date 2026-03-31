@@ -8,24 +8,17 @@ export default function RegisterPage() {
     const navigate = useNavigate();
     const location = useLocation();
     const { login } = useAuth();
-
-    const getSafeReturnPath = () => {
-        const fromPath = location.state?.from?.pathname;
-        const forbiddenPaths = ['/', '/login', '/register'];
-
-        if (!fromPath || forbiddenPaths.includes(fromPath)) {
-            return '/home';
-        }
-
-        return fromPath;
-    };
     
     const handleRegister = async (user, setMessage) => {
         try {
             const data = await authService.register(user.username, user.password);
             login(data.token, { username: user.username });
-
-            navigate(getSafeReturnPath(), { replace: true });
+            
+            if (location.state?.from?.pathname) {
+                navigate(location.state.from.pathname, { state: { from: location.state.from } });
+            } else {
+                navigate('/login');
+            }
         } catch (err) {
             console.error(err);
             setMessage("Registration failed.");
@@ -42,7 +35,7 @@ export default function RegisterPage() {
                 <AuthForm title="Create Account" buttonText="Register" auth_fn={registerUserFn} />
             </div>
             <div className="footer">
-                Already have an account? Login here: <Link to="/login" state={{ from: location.state?.from || { pathname: '/home' } }}>Sign In</Link>
+                Already have an account? Login here: <Link to="/login" state={{ from: location.state?.from || location }}>Sign In</Link>
             </div>
         </div>
     );
