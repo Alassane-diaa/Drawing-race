@@ -1,5 +1,6 @@
 import { useAuth } from '../hooks/useAuth';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { userService } from '../services/userService';
 import imageBadge from '../images/badgeDefaut.png';
 import "./StatsPage.css";
@@ -7,6 +8,7 @@ import "./StatsPage.css";
 // ─── Page principale ──────────────────────────────────────────────────────────
 export default function StatsPage() {
     const { token, isUser, isLoading } = useAuth();
+    const navigate = useNavigate();
     const [stats, setStats]             = useState(null);
     const [leaderboard, setLeaderboard] = useState(null);
     const [error, setError]             = useState(null);
@@ -60,6 +62,16 @@ export default function StatsPage() {
                     onClose={() => setSelectedBadgeId(null)}
                 />
             )}
+
+            {/* ── Bouton retour accueil ── */}
+            <button
+                className="backHomeBtn"
+                onClick={() => navigate('/home')}
+                aria-label="Retour à l'accueil"
+            >
+                <span className="backHomeArrow">←</span>
+                <span className="backHomeLabel">Accueil</span>
+            </button>
 
             <div style={{
                 display: 'grid',
