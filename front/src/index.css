@@ -45,7 +45,6 @@ button {
   background-color: #1a1a1a;
   cursor: pointer;
   transition: border-color 0.25s;
-  margin: 1em;
 }
 button:hover {
   border-color: #646cff;
@@ -63,11 +62,22 @@ AuthForm {
   :root {
     color: #213547;
     background-color: #ffffff;
+    --main-bg: #ffffff;
   }
   a:hover {
     color: #747bff;
   }
   button {
     background-color: #f9f9f9;
+  }
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --main-text: #ffffff;
+    --main-bg: #242424;
+    --button-bg: #1a1a1a;
+
+    color: var(--main-text);
+    background-color: var(--main-bg);
   }
 }

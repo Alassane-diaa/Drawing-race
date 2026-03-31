@@ -4,7 +4,7 @@
     align-items: center;
     min-height: 100vh;
     padding: 20px;
-    background-color: #242424;
+
 }
 
 .card {
@@ -13,8 +13,8 @@
     width: 100%;
     max-width: 400px;
     border: 1px solid #e5e7eb;
-    background: #242434;
     font-size: 1.5rem;
+    background-color: var(--main-bg);
 }
 .card:hover {
   filter: drop-shadow(0 0 3em #646cffaa);
@@ -22,6 +22,7 @@
 
 button {
     font-size: 1.1rem;
+    margin: 1em;
 }
 
 input{
