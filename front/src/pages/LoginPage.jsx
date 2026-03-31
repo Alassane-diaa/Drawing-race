@@ -30,9 +30,11 @@ export default function LoginPage() {
     };
 
     return (
-        <div>
-            <AuthForm title="Login" buttonText="Sign In" auth_fn={loginUserFn} />
-            <div style={{ textAlign: 'center', marginTop: '20px' }}>
+        <div className="wrapper">
+            <div className="card">
+                <AuthForm title="Login" buttonText="Sign In" auth_fn={loginUserFn} />
+            </div>
+            <div className="footer">
                 No account? Create an account here: <Link to="/register" state={{ from: location.state?.from || location }}>Register</Link>
             </div>
         </div>

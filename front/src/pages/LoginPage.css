@@ -1,0 +1,38 @@
+.wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    background-color: #242424;
+}
+
+.card {
+    padding: 2.5rem;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 400px;
+    border: 1px solid #e5e7eb;
+    background: #242434;
+    font-size: 1.5rem;
+}
+.card:hover {
+  filter: drop-shadow(0 0 3em #646cffaa);
+}
+
+button {
+    font-size: 1.1rem;
+}
+
+input{
+    margin: 0.5em;
+}
+
+.footer {
+    text-align: center;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    color: #4b5563;
+    font-size: 1.2rem;
+}
+
