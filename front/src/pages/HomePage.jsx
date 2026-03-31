@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import icon from "../resources/images/iconeV1.png";
+import './HomePage'
 
 export default function HomePage() {
     const [difficulty, setDifficulty] = useState("medium");
