@@ -67,6 +67,7 @@ export default function GamePage() {
 
     // Location state
     const location = useLocation();
+    const isMultiplayerRoute = location.pathname.startsWith('/multiplayer/');
     const storedSession = (() => {
         try {
             const rawSession = localStorage.getItem(MULTIPLAYER_SESSION_KEY);
@@ -78,9 +79,11 @@ export default function GamePage() {
     })();
 
     // Game mode state
-    const multiplayer = Boolean(location.state?.multiplayer ?? storedSession?.multiplayer);
-    const gameId = location.state?.gameId || storedSession?.gameId;
-    const playerName = location.state?.playerName || storedSession?.playerName;
+    const multiplayer = isMultiplayerRoute
+        ? Boolean(location.state?.multiplayer ?? storedSession?.multiplayer)
+        : false;
+    const gameId = multiplayer ? (location.state?.gameId || storedSession?.gameId) : undefined;
+    const playerName = multiplayer ? (location.state?.playerName || storedSession?.playerName) : undefined;
     const selectedDifficulty = location.state?.difficulty || 'medium';
     const initialGameState = location.state?.gameState;
 

@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import './index.css'
 import Doc from './pages/Doc.jsx'
 import App from './App.jsx'
@@ -20,7 +20,16 @@ createRoot(document.getElementById('root')).render(
         <Routes>
           <Route path="/" element={<Doc />} />
           <Route path="/home" element={<App />} />
-          <Route path="/game" element={<GamePage />} />
+          <Route path="/game" element={<Navigate to="/solo/game" replace />} />
+          <Route path="/solo/game" element={<GamePage />} />
+          <Route
+            path="/multiplayer/game"
+            element={
+              <ProtectedRoute>
+                <GamePage />
+              </ProtectedRoute>
+            }
+          />
           <Route 
               path="/stats" 
               element={

@@ -29,7 +29,7 @@ export default function MultiplayerPage() {
     const [gameIdInput, setGameIdInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    // If a valid lobby session already exists, go directly back to /game
+    // If a valid lobby session already exists, go directly back to multiplayer game route
     useEffect(() => {
         if (!isUser || !user?.username) {
             return;
@@ -62,7 +62,7 @@ export default function MultiplayerPage() {
                     return;
                 }
 
-                navigate('/game', {
+                navigate('/multiplayer/game', {
                     replace: true,
                     state: {
                         gameId: currentGame.gameId,
@@ -229,7 +229,7 @@ export default function MultiplayerPage() {
             console.warn('Unable to persist multiplayer session:', error);
         }
 
-        navigate('/game', {
+        navigate('/multiplayer/game', {
             state: {
                 gameId: currentGame.gameId,
                 playerName: user.username,
