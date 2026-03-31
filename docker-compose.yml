@@ -15,6 +15,7 @@ services:
       - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.mariadb.jdbc.Driver
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - SPRING_JPA_SHOW_SQL=true
+      - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.MariaDBDialect
     depends_on:
       db:
         condition: service_healthy
@@ -46,7 +47,6 @@ services:
       - "5000:5000"
     networks:
       - drawing-network
-
 
   db:
     image: mariadb:11
