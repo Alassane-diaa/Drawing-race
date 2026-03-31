@@ -9,7 +9,8 @@ import {
     markPlayerNotReady,
     startGame as startMultiplayerGame,
     leaveLobby,
-    deleteLobby
+    deleteLobby,
+    endGame
 } from '../services/gameService';
 import {
     splitPointsIntoStrokes,
@@ -217,8 +218,18 @@ export default function GamePage() {
         gameLogic.resetGame();
     }
 
-    function handleVictory(category, confidence) {
+    async function handleVictory(category, confidence) {
         alert(`Congratulations! The AI recognized your drawing: ${category} (${(confidence * 100).toFixed(2)}%)`);
+
+        // Enregistrer la victoire en BDD si on est en mode multijoueur
+        if (multiplayer && gameId && playerName) {
+            try {
+                await endGame(gameId, playerName);
+            } catch (error) {
+                console.error('Failed to record game result:', error);
+            }
+        }
+
         gameLogic.resetGame();
     }
 
@@ -330,7 +341,7 @@ export default function GamePage() {
                 <span className="backHomeArrow">←</span>
                 <span className="backHomeLabel">Accueil</span>
             </button>
-            
+
             {/* Category Display */}
             <div className="category-display">
                 {gameLogic.hasStartedGame && gameLogic.targetCategory ? (

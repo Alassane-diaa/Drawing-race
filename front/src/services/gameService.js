@@ -178,3 +178,14 @@ export const processDrawing = async (points) => {
     }
     return response.json();
 };
+
+export const endGame = async (gameId, winnerName) => {
+    const response = await fetch(`${API_BASE_URL}/game/${gameId}/end`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerName: winnerName })
+    });
+    if (!response.ok)
+        throw new Error(await parseErrorResponse(response, 'Unable to end game'));
+    return response.json();
+};
