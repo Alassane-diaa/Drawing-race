@@ -26,7 +26,7 @@ export const authService = {
     },
 
     verifyToken: async (token) => {
-        const response = await fetch("http://localhost:8080/test", {
+        const response = await fetch("http://localhost:8080/testUser", {
             method: "GET",
             headers: {
                 "Authorization": "Bearer " + token
