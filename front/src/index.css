@@ -63,6 +63,7 @@ AuthForm {
     color: #213547;
     background-color: #ffffff;
     --main-bg: #ffffff;
+    --borderCardColor: #242424;
   }
   a:hover {
     color: #747bff;
@@ -82,6 +83,7 @@ AuthForm {
     --main-text: #ffffff;
     --main-bg: #242424;
     --button-bg: #1a1a1a;
+    --borderCardColor: #e5e7eb;
 
     color: var(--main-text);
     background-color: var(--main-bg);
