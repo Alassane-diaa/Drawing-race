@@ -4,6 +4,8 @@ import com.projetase.drawing.model.LoginRequest;
 import com.projetase.drawing.model.AppUser;
 import com.projetase.drawing.repository.UserRepo;
 import com.projetase.drawing.service.JwtService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -14,6 +16,7 @@ import java.util.Map;
 @CrossOrigin
 @RestController
 @RequestMapping("/auth")
+@Tag(name = "Authentication", description = "Endpoints for login and registration")
 public class AuthController {
 
     private final UserRepo userRepository;
@@ -29,6 +32,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
+    @Operation(summary = "Authenticate user", description = "Returns a JWT token when username/password are valid")
     public ResponseEntity<Map<String, String>> login(@RequestBody LoginRequest request) {
         AppUser user = userRepository.findByUsername(request.getUsername());
         if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
@@ -42,6 +46,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
+    @Operation(summary = "Register user", description = "Creates a user account and returns a JWT token")
     public ResponseEntity<Map<String, String>> register(@RequestBody LoginRequest request) {
         Map<String, String> success=jwtService.register(request);
         return ResponseEntity.ok(success);
