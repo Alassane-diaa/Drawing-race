@@ -11,6 +11,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -20,15 +25,18 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-                .csrf(AbstractHttpConfigurer::disable) // important pour API REST
-                .formLogin(AbstractHttpConfigurer::disable) // désactive page login HTML
-                .httpBasic(AbstractHttpConfigurer::disable) // désactive basic auth
+                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // ← CORS avant tout
+                .csrf(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/login", "/auth/register", "/process", "/ws/**", "/game/**").permitAll()
-                        .requestMatchers("/auth/login", "/auth/register", "/process", "/random-category").permitAll() //C'est Noélie, j'ai authprisé un truc chelou
-                        .requestMatchers(HttpMethod.OPTIONS, "/test","/testAdmin","/testUser").permitAll()
-                        .requestMatchers( "/testAdmin").hasAuthority("ADMIN")
-                        .requestMatchers( "/testUser").hasAuthority("USER")
+                        .requestMatchers("/auth/login", "/auth/register", "/process", "/random-category").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // préflight libre sur toutes les routes
+                        .requestMatchers(HttpMethod.GET, "/user/leaderboard").permitAll() // classement public
+                        .requestMatchers(HttpMethod.GET, "/badge").permitAll()            // liste des badges publique
+                        .requestMatchers("/testAdmin").hasAuthority("ADMIN")
+                        .requestMatchers("/testUser").hasAuthority("USER")
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt
@@ -37,7 +45,20 @@ public class SecurityConfig {
         return http.build();
     }
 
-    //Pour gérer les rôles
+    @Bean
+    CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+
+        config.setAllowedOrigins(List.of("http://localhost:5173")); // URL du front Vite
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        config.setAllowCredentials(true); // nécessaire pour que le token JWT passe
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config); // appliqué à toutes les routes
+        return source;
+    }
+
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
