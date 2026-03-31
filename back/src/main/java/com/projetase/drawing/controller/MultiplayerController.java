@@ -4,6 +4,7 @@ import com.projetase.drawing.dto.CreateGameRequest;
 import com.projetase.drawing.dto.ConnectRequest;
 import com.projetase.drawing.dto.GameEvent;
 import com.projetase.drawing.dto.GameView;
+import com.projetase.drawing.dto.PredictionSubmitRequest;
 import com.projetase.drawing.model.Game;
 import com.projetase.drawing.model.GameStatus;
 import com.projetase.drawing.service.GameService;
@@ -105,6 +106,46 @@ public class MultiplayerController {
         return ResponseEntity.ok(gameView);
     }
 
+    @PostMapping("/{gameId}/prediction")
+    @Operation(summary = "Submit prediction result for current round")
+    public ResponseEntity<GameView> submitPrediction(@PathVariable String gameId, @RequestBody PredictionSubmitRequest request) {
+        log.info("submit prediction: gameId={}, playerName={}, category={}, confidence={}",
+                gameId,
+                request.getPlayerName(),
+                request.getCategory(),
+                request.getConfidence());
+        Game game = gameService.submitPrediction(
+                gameId,
+                request.getPlayerName(),
+                request.getCategory(),
+                request.getConfidence(),
+                request.getTargetConfidence()
+        );
+        GameView gameView = GameView.from(game);
+        simpMessagingTemplate.convertAndSend("/topic/game/" + gameId + "/state", gameView);
+        return ResponseEntity.ok(gameView);
+    }
+
+    @PostMapping("/{gameId}/stop")
+    @Operation(summary = "Stop current match and return to in-progress lobby")
+    public ResponseEntity<GameView> stopMatch(@PathVariable String gameId, @RequestBody CreateGameRequest request) {
+        log.info("stop match request: gameId={}, playerName={}", gameId, request.getPlayerName());
+        Game game = gameService.stopMatch(gameId, request.getPlayerName());
+        GameView gameView = GameView.from(game);
+        simpMessagingTemplate.convertAndSend("/topic/game/" + gameId + "/state", gameView);
+        return ResponseEntity.ok(gameView);
+    }
+
+    @PostMapping("/{gameId}/round/finish")
+    @Operation(summary = "Finalize current round when timer is over")
+    public ResponseEntity<GameView> finishRound(@PathVariable String gameId, @RequestBody CreateGameRequest request) {
+        log.info("finish round: gameId={}, playerName={}", gameId, request.getPlayerName());
+        Game game = gameService.finishRoundIfExpired(gameId, request.getPlayerName());
+        GameView gameView = GameView.from(game);
+        simpMessagingTemplate.convertAndSend("/topic/game/" + gameId + "/state", gameView);
+        return ResponseEntity.ok(gameView);
+    }
+
     @PostMapping("/{gameId}/leave")
     @Operation(summary = "Player 2 leaves lobby")
     public ResponseEntity<GameView> leaveLobby(@PathVariable String gameId, @RequestBody CreateGameRequest request) {
@@ -127,6 +168,16 @@ public class MultiplayerController {
         GameEvent deleteEvent = GameEvent.gameDeleted(gameId, deletedGame.getPlayer1Name());
         simpMessagingTemplate.convertAndSend("/topic/game/" + gameId + "/event", deleteEvent);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{gameId}/restart")
+    @Operation(summary = "Restart match from current lobby players")
+    public ResponseEntity<GameView> restartMatch(@PathVariable String gameId, @RequestBody CreateGameRequest request) {
+        log.info("restart match request: gameId={}, playerName={}", gameId, request.getPlayerName());
+        Game game = gameService.restartMatch(gameId, request.getPlayerName());
+        GameView gameView = GameView.from(game);
+        simpMessagingTemplate.convertAndSend("/topic/game/" + gameId + "/state", gameView);
+        return ResponseEntity.ok(gameView);
     }
 
     private void publishStateAndReadyEvent(Game game, GameView gameView) {

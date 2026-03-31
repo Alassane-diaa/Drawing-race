@@ -5,11 +5,16 @@ import './GamePage.css';
 // Services
 import {
     getGameState,
+    processDrawing,
     markPlayerReady,
     markPlayerNotReady,
     startGame as startMultiplayerGame,
     leaveLobby,
-    deleteLobby
+    deleteLobby,
+    submitPrediction,
+    finishRound,
+    restartGame,
+    stopGame
 } from '../services/gameService';
 import {
     splitPointsIntoStrokes,
@@ -82,7 +87,15 @@ export default function GamePage() {
     // Local state
     const [gameReady, setGameReady] = useState(!multiplayer || initialGameState?.status === 'STARTED');
     const [gameState, setGameState] = useState(initialGameState);
+    const [multiplayerPredictionData, setMultiplayerPredictionData] = useState(null);
+    const [multiplayerTimeLeft, setMultiplayerTimeLeft] = useState(0);
+    const [infoMessage, setInfoMessage] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
+    const announcedRoundRef = useRef(0);
+    const timeoutHandledRoundRef = useRef('');
+    const clearedRoundRef = useRef('');
+    const isHost = multiplayer && playerName && gameState?.player1Name === playerName;
+    const isPlayer2 = multiplayer && playerName && gameState?.player2Name === playerName;
 
     // Save multiplayer session
     useEffect(() => {
@@ -130,6 +143,31 @@ export default function GamePage() {
         };
     }, [multiplayer, gameId]);
 
+    useEffect(() => {
+        if (!multiplayer || !gameId) {
+            return;
+        }
+
+        let isCancelled = false;
+
+        const syncState = async () => {
+            try {
+                const latestState = await getGameState(gameId);
+                if (!isCancelled) {
+                    setGameState(latestState);
+                }
+            } catch {
+                // Keep WebSocket state as source if polling temporarily fails.
+            }
+        };
+
+        const interval = setInterval(syncState, 1500);
+        return () => {
+            isCancelled = true;
+            clearInterval(interval);
+        };
+    }, [multiplayer, gameId]);
+
     // Game logic hook
     const gameLogic = useGameLogic(selectedDifficulty, handleTimeUp, handleVictory);
 
@@ -169,9 +207,6 @@ export default function GamePage() {
 
     function handleGameEvent(gameEvent) {
         setErrorMessage('');
-        if (gameEvent.type === 'GAME_STARTED') {
-            setGameReady(true);
-        }
 
         if (gameEvent.type === 'GAME_DELETED') {
             try {
@@ -186,8 +221,10 @@ export default function GamePage() {
     function handleGameStateChanged(state) {
         setErrorMessage('');
         setGameState(state);
-        if (state.status === 'STARTED') {
+        if (state.status === 'STARTED' || state.status === 'FINISHED') {
             setGameReady(true);
+        } else {
+            setGameReady(false);
         }
     }
 
@@ -199,7 +236,34 @@ export default function GamePage() {
             publishStroke(activeClient, gameId, playerName, finishedStroke);
         }
 
-        // Get AI prediction
+        if (multiplayer && gameId && playerName && gameState?.status === 'STARTED' && gameState?.roundActive) {
+            try {
+                const predictionResponse = await processDrawing(updatedCoords);
+                setMultiplayerPredictionData(predictionResponse);
+
+                const predictionCategory = predictionResponse?.prediction?.category || '';
+                const predictionConfidence = predictionResponse?.prediction?.confidence || 0;
+                const targetCategory = gameState?.targetCategory;
+                const targetInTop10 = predictionResponse?.top10?.find(
+                    (item) => item?.category === targetCategory
+                );
+                const targetConfidence = targetInTop10?.confidence
+                    || (predictionCategory === targetCategory ? predictionConfidence : 0);
+
+                await submitPrediction(
+                    gameId,
+                    playerName,
+                    predictionCategory,
+                    predictionConfidence,
+                    targetConfidence
+                );
+            } catch (error) {
+                setErrorMessage(`Prediction sync failed: ${error.message}`);
+            }
+            return;
+        }
+
+        // Solo mode AI prediction
         await gameLogic.fetchAndProcessDrawing(updatedCoords);
     }
 
@@ -213,14 +277,91 @@ export default function GamePage() {
     }
 
     function handleTimeUp(category) {
-        alert(`Time'\''s Up! You had to draw: ${category}`);
+        setInfoMessage(`Temps écoulé. Catégorie attendue: ${category}`);
         gameLogic.resetGame();
     }
 
     function handleVictory(category, confidence) {
-        alert(`Congratulations! The AI recognized your drawing: ${category} (${(confidence * 100).toFixed(2)}%)`);
+        setInfoMessage(`Bravo. L'IA a reconnu: ${category} (${(confidence * 100).toFixed(2)}%)`);
         gameLogic.resetGame();
     }
+
+    useEffect(() => {
+        if (!multiplayer || !gameState) {
+            return;
+        }
+
+        if (gameState.lastRoundNumber > 0 && gameState.lastRoundNumber !== announcedRoundRef.current) {
+            announcedRoundRef.current = gameState.lastRoundNumber;
+            if (gameState.lastRoundResult === 'TIE') {
+                setInfoMessage(`Manche ${gameState.lastRoundNumber}: égalité.`);
+            } else if (gameState.lastRoundWinnerName) {
+                setInfoMessage(`Manche ${gameState.lastRoundNumber}: ${gameState.lastRoundWinnerName} gagne.`);
+            }
+        }
+
+        if (gameState.status === 'FINISHED') {
+            if (gameState.matchWinnerName) {
+                setInfoMessage(`Partie terminée: ${gameState.matchWinnerName} remporte le match.`);
+            } else {
+                setInfoMessage('Partie terminée: match nul.');
+            }
+        }
+    }, [multiplayer, gameState]);
+
+    useEffect(() => {
+        if (!multiplayer || !gameState || gameState.status !== 'STARTED' || !gameState.roundActive) {
+            setMultiplayerTimeLeft(0);
+            return;
+        }
+
+        const roundKey = `${gameState.gameId}-${gameState.currentRound}-${gameState.roundStartedAtMs}`;
+        timeoutHandledRoundRef.current = '';
+
+        const updateRemainingTime = async () => {
+            const endAtMs = gameState.roundStartedAtMs + gameState.roundDurationSec * 1000;
+            const seconds = Math.max(0, Math.ceil((endAtMs - Date.now()) / 1000));
+            setMultiplayerTimeLeft(seconds);
+
+            if (seconds === 0 && timeoutHandledRoundRef.current !== roundKey) {
+                timeoutHandledRoundRef.current = roundKey;
+                try {
+                    await finishRound(gameId, playerName);
+                } catch (error) {
+                    setErrorMessage(`Round sync failed: ${error.message}`);
+                }
+            }
+        };
+
+        updateRemainingTime();
+        const interval = setInterval(updateRemainingTime, 250);
+        return () => clearInterval(interval);
+    }, [
+        multiplayer,
+        gameState,
+        gameId,
+        playerName
+    ]);
+
+    useEffect(() => {
+        if (!multiplayer || !gameState || gameState.status !== 'STARTED' || !gameState.roundActive) {
+            return;
+        }
+
+        const roundKey = `${gameState.gameId}-${gameState.currentRound}-${gameState.roundStartedAtMs}`;
+        if (clearedRoundRef.current === roundKey) {
+            return;
+        }
+
+        clearedRoundRef.current = roundKey;
+
+        // Reset both canvases and local prediction display at the beginning of each round.
+        drawingControl.hardResetCanvas();
+        setMultiplayerPredictionData(null);
+
+        opponentStrokesRef.current = [];
+        drawCenteredOnCanvas(canvasRefOpponent.current, []);
+    }, [multiplayer, gameState, drawingControl]);
 
     // ============ Multiplayer Handlers ============
 
@@ -285,6 +426,59 @@ export default function GamePage() {
         }
     }
 
+    async function handleRestartGame() {
+        if (!multiplayer || !gameId || !playerName) return;
+
+        try {
+            setErrorMessage('');
+            const updatedGame = await restartGame(gameId, playerName);
+            setGameState(updatedGame);
+            setGameReady(false);
+            setInfoMessage('Match relancé. Le host peut démarrer immédiatement.');
+            drawingControl.hardResetCanvas();
+            opponentStrokesRef.current = [];
+            drawCenteredOnCanvas(canvasRefOpponent.current, []);
+        } catch (error) {
+            setErrorMessage(`Cannot restart game: ${error.message}`);
+        }
+    }
+
+    async function handleStopGame() {
+        if (!multiplayer || !gameId || !playerName) return;
+
+        try {
+            setErrorMessage('');
+            const updatedGame = await stopGame(gameId, playerName);
+            setGameState(updatedGame);
+            setGameReady(false);
+            setInfoMessage('Partie arrêtée. Retour au lobby.');
+            drawingControl.hardResetCanvas();
+            opponentStrokesRef.current = [];
+            drawCenteredOnCanvas(canvasRefOpponent.current, []);
+            setMultiplayerPredictionData(null);
+        } catch (error) {
+            setErrorMessage(`Cannot stop game: ${error.message}`);
+        }
+    }
+
+    async function handleQuitCurrentMatch() {
+        if (!multiplayer || !gameId || !playerName) return;
+
+        try {
+            setErrorMessage('');
+            if (isHost) {
+                await deleteLobby(gameId, playerName);
+            } else if (isPlayer2) {
+                await leaveLobby(gameId, playerName);
+            }
+        } catch (error) {
+            setErrorMessage(`Cannot quit match cleanly: ${error.message}`);
+        } finally {
+            localStorage.removeItem(MULTIPLAYER_SESSION_KEY);
+            navigate('/play');
+        }
+    }
+
     // ============ Render ============
 
     return (
@@ -294,6 +488,12 @@ export default function GamePage() {
             {errorMessage && (
                 <div className="error-message">
                     <p>{errorMessage}</p>
+                </div>
+            )}
+
+            {infoMessage && (
+                <div className="info-message">
+                    <p>{infoMessage}</p>
                 </div>
             )}
 
@@ -311,27 +511,77 @@ export default function GamePage() {
                 />
             )}
 
-            {/* Start Game Button */}
-            <div className="button-group">
-                <button
-                    className="btn-start-game"
-                    onClick={gameLogic.startNewGame}
-                    disabled={multiplayer && !gameReady}
-                >
-                    Start Game
-                </button>
-            </div>
+            {/* Start Game Button (solo only) */}
+            {!multiplayer && (
+                <div className="button-group">
+                    <button
+                        className="btn-start-game"
+                        onClick={gameLogic.startNewGame}
+                        disabled={gameLogic.hasStartedGame}
+                    >
+                        Start Solo Game
+                    </button>
+                </div>
+            )}
+
+            {multiplayer && gameState?.status !== 'IN_PROGRESS' && (
+                <div className="button-group">
+                    {isHost && (
+                        <button
+                            className="btn-unready"
+                            onClick={handleStopGame}
+                            disabled={!gameId}
+                        >
+                            Stop Game
+                        </button>
+                    )}
+
+                    {isHost && gameState?.status === 'FINISHED' && (
+                        <button
+                            className="btn-start-game"
+                            onClick={handleRestartGame}
+                            disabled={!gameId}
+                        >
+                            Relancer
+                        </button>
+                    )}
+
+                    <button
+                        className="btn-unready"
+                        onClick={handleQuitCurrentMatch}
+                        disabled={!gameId}
+                    >
+                        Quit Match
+                    </button>
+                </div>
+            )}
+
+            {multiplayer && gameState && (
+                <div className="multiplayer-status-panel">
+                    <p>Manche {gameState.currentRound}/{gameState.totalRounds}</p>
+                    <p>{gameState.player1Name}: {gameState.player1RoundsWon} | {gameState.player2Name || 'Player 2'}: {gameState.player2RoundsWon}</p>
+                    {gameState.status === 'STARTED' && gameState.roundActive && (
+                        <p>Progres manche: {(gameState.player1BestConfidence * 100).toFixed(1)}% | {(gameState.player2BestConfidence * 100).toFixed(1)}%</p>
+                    )}
+                </div>
+            )}
 
             {/* Category Display */}
             <div className="category-display">
-                {gameLogic.hasStartedGame && gameLogic.targetCategory ? (
+                {!multiplayer && gameLogic.hasStartedGame && gameLogic.targetCategory ? (
                     <h2>
                         {'->'} <strong>{gameLogic.targetCategory}</strong> {'<-'}
                     </h2>
                 ) : multiplayer && !gameReady ? (
-                    <p>Waiting for the game to start...</p>
+                    <p>En attente du depart...</p>
+                ) : multiplayer && gameState?.status === 'STARTED' && gameState?.targetCategory ? (
+                    <h2>
+                        {'->'} <strong>{gameState.targetCategory}</strong> {'<-'}
+                    </h2>
+                ) : multiplayer && gameState?.status === 'FINISHED' ? (
+                    <p>Partie terminee.</p>
                 ) : (
-                    <p>Click on "Commencer la partie" to start</p>
+                    <p>Commence une partie.</p>
                 )}
             </div>
 
@@ -347,7 +597,9 @@ export default function GamePage() {
                 />
                 {/* Timer */}
                 <div className="timer-display">
-                    {gameLogic.hasStartedGame
+                    {multiplayer
+                        ? `00:${multiplayerTimeLeft < 10 ? `0${multiplayerTimeLeft}` : multiplayerTimeLeft}`
+                        : gameLogic.hasStartedGame
                         ? `00:${
                               gameLogic.timeLeft < 10
                                   ? `0${gameLogic.timeLeft}`
@@ -393,7 +645,7 @@ export default function GamePage() {
             </div>
 
             {/* Prediction Display */}
-            <PredictionDisplay predictionData={gameLogic.predictionData} />
+            <PredictionDisplay predictionData={multiplayer ? multiplayerPredictionData : gameLogic.predictionData} />
         </div>
     );
 }
