@@ -1,5 +1,4 @@
 package com.projetase.drawing.controller;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.projetase.drawing.model.AppUser;
 import com.projetase.drawing.model.LoginRequest;
@@ -15,9 +14,8 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
 import java.util.Map;
-
+import java.util.Optional;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -26,20 +24,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @ExtendWith(MockitoExtension.class)
 class AuthControllerTest {
-
     private MockMvc mockMvc;
-
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Mock
     private UserRepo userRepo;
-
     @Mock
     private PasswordEncoder passwordEncoder;
-
     @Mock
     private JwtService jwtService;
-
     @InjectMocks
     private AuthController authController;
 
@@ -55,7 +48,7 @@ class AuthControllerTest {
         user.setPassword("stored-hash");
         user.setRole("USER");
 
-        when(userRepo.findByUsername("alice")).thenReturn(user);
+        when(userRepo.findByUsername("alice")).thenReturn(Optional.of(user)); // fix
         when(passwordEncoder.matches("secret", "stored-hash")).thenReturn(true);
         when(jwtService.generateToken("alice", "USER")).thenReturn("jwt-token");
 
@@ -76,7 +69,7 @@ class AuthControllerTest {
         user.setPassword("stored-hash");
         user.setRole("USER");
 
-        when(userRepo.findByUsername("alice")).thenReturn(user);
+        when(userRepo.findByUsername("alice")).thenReturn(Optional.of(user)); // fix
         when(passwordEncoder.matches("wrong", "stored-hash")).thenReturn(false);
 
         mockMvc.perform(post("/auth/login")
