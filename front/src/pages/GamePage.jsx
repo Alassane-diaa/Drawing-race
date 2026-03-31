@@ -322,6 +322,15 @@ export default function GamePage() {
                 </button>
             </div>
 
+            <button
+                className="backHomeBtn"
+                onClick={() => navigate('/home')}
+                aria-label="Retour à l'accueil"
+            >
+                <span className="backHomeArrow">←</span>
+                <span className="backHomeLabel">Accueil</span>
+            </button>
+            
             {/* Category Display */}
             <div className="category-display">
                 {gameLogic.hasStartedGame && gameLogic.targetCategory ? (
