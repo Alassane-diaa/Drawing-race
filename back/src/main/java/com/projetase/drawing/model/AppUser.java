@@ -14,6 +14,8 @@ import org.hibernate.jdbc.Expectation;
 
 @Entity
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class AppUser {
 
     @Id

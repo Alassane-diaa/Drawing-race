@@ -12,9 +12,7 @@ export default function RegisterPage() {
         try {
             const data = await authService.register(user.username, user.password);
             login(data.token, { username: user.username });
-            setMessage("Registered! Token: " + data.token);
             
-            // Navigate back to previous page (e.g., /login or /stats) while preserving state
             if (location.state?.from?.pathname) {
                 navigate(location.state.from.pathname, { state: { from: location.state.from } });
             } else {
@@ -22,11 +20,11 @@ export default function RegisterPage() {
             }
         } catch (err) {
             console.error(err);
-            setMessage("Registration failed");
+            setMessage("Registration failed.");
         }
     };
 
-    const registerUserFn = (user, login, setMessage) => {
+    const registerUserFn = (user, setMessage) => {
         handleRegister(user, setMessage);
     };
 

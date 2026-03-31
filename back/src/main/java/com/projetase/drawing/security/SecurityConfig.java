@@ -11,10 +11,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -24,16 +20,15 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // ← ajout
-                .csrf(AbstractHttpConfigurer::disable)
-                .formLogin(AbstractHttpConfigurer::disable)
-                .httpBasic(AbstractHttpConfigurer::disable)
+                .csrf(AbstractHttpConfigurer::disable) // important pour API REST
+                .formLogin(AbstractHttpConfigurer::disable) // désactive page login HTML
+                .httpBasic(AbstractHttpConfigurer::disable) // désactive basic auth
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/login", "/auth/register", "/process").permitAll()
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // ← OPTIONS sur toutes les routes
-                        .requestMatchers("/user/leaderboard", "/user/avatar/**").permitAll()
-                        .requestMatchers("/testAdmin").hasAuthority("ADMIN")
-                        .requestMatchers("/testUser").hasAuthority("USER")
+                        .requestMatchers("/auth/login", "/auth/register", "/process", "/ws/**", "/game/**").permitAll()
+                        .requestMatchers("/auth/login", "/auth/register", "/process", "/random-category").permitAll() //C'est Noélie, j'ai authprisé un truc chelou
+                        .requestMatchers(HttpMethod.OPTIONS, "/test","/testAdmin","/testUser").permitAll()
+                        .requestMatchers( "/testAdmin").hasAuthority("ADMIN")
+                        .requestMatchers( "/testUser").hasAuthority("USER")
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt
@@ -42,19 +37,7 @@ public class SecurityConfig {
         return http.build();
     }
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
-    }
-
+    //Pour gérer les rôles
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
