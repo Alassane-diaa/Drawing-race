@@ -1,4 +1,45 @@
-import GamePage
-button{
-    margin: 1em;
+.btn-start-game {
+    font-size: 1.3em;
+}
+
+.GameTools{
+    margin: 0.6em;
+    display: flex;
+    flex-direction: row;
+    gap: 1em;
+    align-items: center;
+    justify-content: center;
+}
+.GameTools button {
+    margin: 0.2em;
+}
+.GameTools input{
+    margin: 0.1
+}
+.GameTools .timer-display {
+    font-size: 2rem;
+}
+
+canvas{
+    border-radius: 20px;
+}
+
+.CanvasContainer {
+  display: flex;
+  flex-direction: row;
+  gap: 1em;;
+  align-items: center;
+  margin-top: 1em;
+}
+.CanvasContainer .mainCanvas{
+    width: 40em;
+    height: 30em;
+    max-width: 800px;
+    max-height: 600px;
+}
+.CanvasContainer .opponentCanvas{
+    width: 20em;
+    height: 15em;
+    max-width: 400px;
+    max-height: 300px;
 }

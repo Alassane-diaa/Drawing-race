@@ -1,5 +1,6 @@
 ﻿import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import './GamePage.css';
 
 // Services
 import {
@@ -275,19 +276,6 @@ export default function GamePage() {
                 </div>
             )}
 
-            {/* Category Display */}
-            <div className="category-display">
-                {gameLogic.hasStartedGame && gameLogic.targetCategory ? (
-                    <h2>
-                        {'->'} <strong>{gameLogic.targetCategory}</strong> {'<-'}
-                    </h2>
-                ) : multiplayer && !gameReady ? (
-                    <p>Waiting for the game to start...</p>
-                ) : (
-                    <p>Click on "Commencer la partie" to start</p>
-                )}
-            </div>
-
             {/* Multiplayer Ready-Up Interface */}
             {multiplayer && gameState && !gameReady && (
                 <ReadyUpUI
@@ -302,17 +290,6 @@ export default function GamePage() {
                 />
             )}
 
-            {/* Timer */}
-            <div className="timer-display">
-                {gameLogic.hasStartedGame
-                    ? `00:${
-                          gameLogic.timeLeft < 10
-                              ? `0${gameLogic.timeLeft}`
-                              : gameLogic.timeLeft
-                      }`
-                    : '--:--'}
-            </div>
-
             {/* Start Game Button */}
             <div className="button-group">
                 <button
@@ -320,44 +297,72 @@ export default function GamePage() {
                     onClick={gameLogic.startNewGame}
                     disabled={multiplayer && !gameReady}
                 >
-                    Commencer la partie
+                    Start Game
                 </button>
             </div>
 
+            {/* Category Display */}
+            <div className="category-display">
+                {gameLogic.hasStartedGame && gameLogic.targetCategory ? (
+                    <h2>
+                        {'->'} <strong>{gameLogic.targetCategory}</strong> {'<-'}
+                    </h2>
+                ) : multiplayer && !gameReady ? (
+                    <p>Waiting for the game to start...</p>
+                ) : (
+                    <p>Click on "Commencer la partie" to start</p>
+                )}
+            </div>
+
+
             {/* Drawing Tools */}
-            <GameTools
-                brushState={drawingControl.brushState}
-                brushSize={drawingControl.brushSize}
-                onBrushStateChange={drawingControl.setBrushState}
-                onBrushSizeChange={drawingControl.setBrushSize}
-                onClear={drawingControl.clearCanvas}
-            />
-
-            {/* Main Canvas */}
-            <canvas
-                ref={canvasRef}
-                width={MAIN_CANVAS_WIDTH}
-                height={MAIN_CANVAS_HEIGHT}
-                style={{ border: '1px solid black', backgroundColor: 'white' }}
-                onClick={drawingControl.onClickCanvas}
-                onMouseDown={drawingControl.onMouseDownCanvas}
-                onMouseMove={drawingControl.handleMouseMoveCanvas}
-                onMouseUp={drawingControl.handleMouseUpCanvas}
-            />
-
-            {/* Opponent Canvas (Multiplayer) */}
-            {multiplayer && (
-                <canvas
-                    ref={canvasRefOpponent}
-                    width={OPPONENT_CANVAS_WIDTH}
-                    height={OPPONENT_CANVAS_HEIGHT}
-                    style={{
-                        border: '1px solid black',
-                        backgroundColor: 'white',
-                        pointerEvents: 'none'
-                    }}
+            <div className="GameTools">
+                <GameTools
+                    brushState={drawingControl.brushState}
+                    brushSize={drawingControl.brushSize}
+                    onBrushStateChange={drawingControl.setBrushState}
+                    onBrushSizeChange={drawingControl.setBrushSize}
+                    onClear={drawingControl.clearCanvas}
                 />
-            )}
+                {/* Timer */}
+                <div className="timer-display">
+                    {gameLogic.hasStartedGame
+                        ? `00:${
+                              gameLogic.timeLeft < 10
+                                  ? `0${gameLogic.timeLeft}`
+                                  : gameLogic.timeLeft
+                          }`
+                        : '--:--'}
+                </div>
+            </div>
+
+            < div className = "CanvasContainer">
+                {/* Main Canvas */}
+                <canvas className="mainCanvas"
+                    ref={canvasRef}
+                    width={MAIN_CANVAS_WIDTH}
+                    height={MAIN_CANVAS_HEIGHT}
+                    style={{ border: '1px solid black', backgroundColor: 'white' }}
+                    onClick={drawingControl.onClickCanvas}
+                    onMouseDown={drawingControl.onMouseDownCanvas}
+                    onMouseMove={drawingControl.handleMouseMoveCanvas}
+                    onMouseUp={drawingControl.handleMouseUpCanvas}
+                />
+
+                {/* Opponent Canvas (Multiplayer) */}
+                {multiplayer && (
+                    <canvas className = "opponentCanvas"
+                        ref={canvasRefOpponent}
+                        width={OPPONENT_CANVAS_WIDTH}
+                        height={OPPONENT_CANVAS_HEIGHT}
+                        style={{
+                            border: '1px solid black',
+                            backgroundColor: 'white',
+                            pointerEvents: 'none'
+                        }}
+                    />
+                )}
+            </div>
 
             {/* Prediction Display */}
             <PredictionDisplay predictionData={gameLogic.predictionData} />

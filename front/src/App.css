@@ -30,10 +30,16 @@ header{
   filter: drop-shadow(0 0 2em #646cffaa);
 }
 
-.grosBouton {
+.content{
+    margin-bottom: 4em;
+}
+.content button {
+    margin: 0.1em;
+}
+.content .grosBouton {
   padding: 1em 2em 1em 2em;
-  margin: 0.5em 0.5em 0.5em 0.5em;
-  font-size: large;
+  margin: 0.5em 0.5em 1em 0.5em;
+  font-size: 1.3em;
   will-change: filter;
   transition: filter 300ms;
 
@@ -41,11 +47,11 @@ header{
 .grosBouton:hover {
   filter: drop-shadow(0 0 2em #646cffaa);
   border-color: #213547;
-  font-size: larger;
+  font-size: 1.4em;
 }
 
-.Tool{
-    margin: 0.5em 0.5em 1em 0.5em;
+.difficulty-selector button {
+    margin-right: 0.1em;
 }
 
 .read-the-docs {

@@ -10,11 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class TestController {
 
-    @GetMapping(value = "/test", produces = "text/plain")
-    public String test() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return "Bonjour "+authentication.getName();
-    }
+
     @GetMapping(value = "/testUser", produces = "text/plain")
     public String testUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

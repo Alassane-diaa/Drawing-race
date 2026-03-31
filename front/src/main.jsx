@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
+import Doc from './pages/Doc.jsx'
 import App from './App.jsx'
 import GamePage from './pages/GamePage.jsx'
 import StatsPage from './pages/StatsPage.jsx'
@@ -17,7 +18,8 @@ createRoot(document.getElementById('root')).render(
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<App />} />
+          <Route path="/" element={<Doc />} />
+          <Route path="/home" element={<App />} />
           <Route path="/game" element={<GamePage />} />
           <Route 
               path="/stats" 

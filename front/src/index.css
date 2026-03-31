@@ -54,10 +54,15 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
+AuthForm {
+
+}
+
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
     background-color: #ffffff;
+    --main-bg: #ffffff;
   }
   a:hover {
     color: #747bff;
@@ -70,4 +75,15 @@ button:focus-visible {
 @keyframes rainbowSpin {
     0%   { background-position: 0% 50%; }
     100% { background-position: 200% 50%; }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --main-text: #ffffff;
+    --main-bg: #242424;
+    --button-bg: #1a1a1a;
+
+    color: var(--main-text);
+    background-color: var(--main-bg);
+  }
 }
