@@ -45,10 +45,10 @@ export default function HomePage() {
             {/* Navigate au lieu de Link pour envoyer difficulté */}
             <button className="grosBouton" onClick={handleStartGame}>Play</button>
             <div>
-                {!isUser && <Link to="login"> <button>Se connecter</button> </Link>}
-                {!isUser && <Link to="register"> <button>Créer un compte</button> </Link>}
-                <Link to="play"> <button>Multiplayer</button> </Link>
-                {isUser && <Link to="stats"> <button>Stats</button> </Link>}
+                {!isUser && <Link to="/login"> <button>Se connecter</button> </Link>}
+                {!isUser && <Link to="/register"> <button>Créer un compte</button> </Link>}
+                <Link to="/play"> <button>Multiplayer</button> </Link>
+                {isUser && <Link to="/stats"> <button>Stats</button> </Link>}
                 {isUser && <button onClick={logout}>Se déconnecter</button>}
             </div>
             {isUser && user?.username && <p>Connecté: {user.username}</p>}
