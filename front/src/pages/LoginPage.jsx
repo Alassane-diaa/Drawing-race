@@ -2,6 +2,7 @@ import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import AuthForm from '../components/auth/AuthForm';
 import { authService } from '../services/authService';
+import './LoginPage.css';
 
 export default function LoginPage() {
     const navigate = useNavigate();
@@ -29,9 +30,11 @@ export default function LoginPage() {
     };
 
     return (
-        <div>
-            <AuthForm title="Login" buttonText="Sign In" auth_fn={loginUserFn} />
-            <div style={{ textAlign: 'center', marginTop: '20px' }}>
+        <div className="wrapper">
+            <div className="card">
+                <AuthForm title="Login" buttonText="Sign In" auth_fn={loginUserFn} />
+            </div>
+            <div className="footer">
                 No account? Create an account here: <Link to="/register" state={{ from: location.state?.from || location }}>Register</Link>
             </div>
         </div>
