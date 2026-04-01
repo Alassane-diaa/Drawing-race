@@ -178,3 +178,67 @@ export const processDrawing = async (points) => {
     }
     return response.json();
 };
+
+/**
+ * Submit a player's prediction result for synchronized multiplayer scoring
+ */
+export const submitPrediction = async (gameId, playerName, category, confidence, targetConfidence) => {
+    const response = await fetch(`${API_BASE_URL}/game/${gameId}/prediction`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerName, category, confidence, targetConfidence })
+    });
+
+    if (!response.ok) {
+        throw new Error(await parseErrorResponse(response, 'Unable to submit prediction'));
+    }
+    return response.json();
+};
+
+/**
+ * Request round finalization after synchronized timer expiration
+ */
+export const finishRound = async (gameId, playerName) => {
+    const response = await fetch(`${API_BASE_URL}/game/${gameId}/round/finish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerName })
+    });
+
+    if (!response.ok) {
+        throw new Error(await parseErrorResponse(response, 'Unable to finish round'));
+    }
+    return response.json();
+};
+
+/**
+ * Restart an ended multiplayer match with same lobby players
+ */
+export const restartGame = async (gameId, playerName) => {
+    const response = await fetch(`${API_BASE_URL}/game/${gameId}/restart`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerName })
+    });
+
+    if (!response.ok) {
+        throw new Error(await parseErrorResponse(response, 'Unable to restart game'));
+    }
+    return response.json();
+};
+
+/**
+ * Stop an active match and return to IN_PROGRESS lobby state
+ */
+export const stopGame = async (gameId, playerName) => {
+    const response = await fetch(`${API_BASE_URL}/game/${gameId}/stop`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerName })
+    });
+
+    if (!response.ok) {
+        throw new Error(await parseErrorResponse(response, 'Unable to stop game'));
+    }
+    return response.json();
+};

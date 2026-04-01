@@ -11,7 +11,7 @@ export default function HomePage() {
     const { isUser, user, logout } = useAuth();
 
     const handleStartGame = () => {
-    navigate("/game", { state: { difficulty } });
+    navigate("/solo/game", { state: { difficulty } });
     };
   return (
     <div className="pageContainer">

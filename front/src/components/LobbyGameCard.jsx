@@ -11,6 +11,8 @@ export default function LobbyGameCard({ game, playerName, onMarkReady, onStartGa
     const isPlayer1 = playerName === game.player1Name;
     const isPlayer2 = playerName === game.player2Name;
     const bothPlayersReady = game.player1Ready && game.player2Ready && game.player2Name;
+    const canPlayer2Ready = game.status === 'IN_PROGRESS' && isPlayer2;
+    const canHostStart = game.status === 'IN_PROGRESS' && isPlayer1 && bothPlayersReady;
 
     return (
         <div className="lobby-game-card">
@@ -47,15 +49,23 @@ export default function LobbyGameCard({ game, playerName, onMarkReady, onStartGa
                 </div>
             )}
 
-            {game.status === 'WAITING' && onMarkReady && (
+            {onMarkReady && (
                 <div className="game-actions">
                     {isPlayer2 && (
-                        <button onClick={onMarkReady} className="btn-ready">
-                            Mark as Ready
+                        <button
+                            onClick={onMarkReady}
+                            className="btn-ready"
+                            disabled={!canPlayer2Ready}
+                        >
+                            {game.player2Ready ? 'Ready' : 'Mark as Ready'}
                         </button>
                     )}
-                    {isPlayer1 && bothPlayersReady && onStartGame && (
-                        <button onClick={onStartGame} className="btn-start">
+                    {isPlayer1 && (
+                        <button
+                            onClick={onStartGame}
+                            className="btn-start"
+                            disabled={!onStartGame || !canHostStart}
+                        >
                             Start Game
                         </button>
                     )}

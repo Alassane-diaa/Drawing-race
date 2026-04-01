@@ -36,6 +36,18 @@ export const useCanvasDrawing = (canvasRef, onStrokeComplete, onClear) => {
         }
     }, [canvasRef, onClear]);
 
+    const hardResetCanvas = useCallback(() => {
+        setStrokeCoords([]);
+        currentStrokeRef.current = [];
+        setIsDrawing(false);
+
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }, [canvasRef]);
+
     const onMouseDownCanvas = useCallback((event) => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -134,6 +146,7 @@ export const useCanvasDrawing = (canvasRef, onStrokeComplete, onClear) => {
         handleMouseMoveCanvas,
         handleMouseUpCanvas,
         onClickCanvas,
-        clearCanvas
+        clearCanvas,
+        hardResetCanvas
     };
 };
