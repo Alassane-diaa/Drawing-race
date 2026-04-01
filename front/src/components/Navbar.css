@@ -1,0 +1,99 @@
+.topNavbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.8rem 1.2rem;
+    box-sizing: border-box;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+    background: var(--main-bg, #242424);
+    backdrop-filter: blur(6px);
+}
+
+.navBrand a {
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: inherit;
+}
+
+.navLinks {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+}
+
+.navLinks a {
+    padding: 0.35rem 0.7rem;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+}
+
+.navLinks a.active {
+    background: rgba(100, 108, 255, 0.16);
+}
+
+.navLinks a:hover {
+    background: rgba(100, 108, 255, 0.1);
+}
+
+.logoutBtn {
+    border: 1px solid rgba(220, 70, 70, 0.5);
+    color: #f07f7f;
+    padding: 0.35rem 0.7rem;
+}
+
+.userBadge {
+    font-size: 0.9rem;
+    opacity: 0.85;
+    white-space: nowrap;
+}
+
+.menuToggle {
+    display: none;
+    width: 40px;
+    height: 34px;
+    padding: 0.25rem;
+    background: transparent;
+    border: 1px solid rgba(128, 128, 128, 0.35);
+}
+
+.menuToggle span {
+    display: block;
+    width: 100%;
+    height: 2px;
+    margin: 4px 0;
+    background: currentColor;
+}
+
+@media (max-width: 900px) {
+    .topNavbar {
+        flex-wrap: wrap;
+    }
+
+    .menuToggle {
+        display: inline-block;
+    }
+
+    .navLinks {
+        width: 100%;
+        display: none;
+        flex-direction: column;
+        align-items: stretch;
+        padding-top: 0.6rem;
+    }
+
+    .navLinks.open {
+        display: flex;
+    }
+
+    .userBadge {
+        order: 3;
+        width: 100%;
+        text-align: left;
+        padding-bottom: 0.2rem;
+    }
+}

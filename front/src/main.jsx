@@ -12,13 +12,16 @@ import MultiplayerPage from './pages/MultiplayerPage.jsx'
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import { PublicOnlyRoute } from './routes/PublicOnlyRoute';
 import { AuthProvider } from './contexts/AuthContext.jsx' 
+import Navbar from './components/Navbar.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <AuthProvider>
       <BrowserRouter>
+        <Navbar />
         <Routes>
-          <Route path="/" element={<Doc />} />
+          <Route path="/" element={<Navigate to="/home" replace />} />
+          <Route path="/doc" element={<Doc />} />
           <Route path="/home" element={<App />} />
           <Route path="/game" element={<Navigate to="/solo/game" replace />} />
           <Route path="/solo/game" element={<GamePage />} />
