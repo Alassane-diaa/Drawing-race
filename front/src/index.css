@@ -1,91 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
+  --bg:          #f5efe4;
+  --bg-elev:     #fffdf8;
+  --ink:         #1a1410;
+  --muted:       #7a6045;
+  --line:        #c8b898;
+  --accent:      #4a3fcc;
+  --accent-deep: #2f25a0;
+  --ok:          #2d8a4a;
+  --danger:      #cc3344;
+  
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+* {
+  box-sizing: border-box;
 }
-a:hover {
-  color: #535bf2;
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
 }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  color: var(--ink);
+  font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(95, 206, 185, 0.14), transparent 32%),
+    radial-gradient(circle at 90% 88%, rgba(255, 196, 134, 0.12), transparent 28%),
+    var(--bg);
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-family: 'Barlow Condensed', 'IBM Plex Sans', sans-serif;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg-elev) 90%, white);
+  color: var(--ink);
+  border-radius: 2px;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: 'IBM Plex Sans', sans-serif;
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: transform 120ms ease, background-color 120ms ease, border-color 120ms ease;
 }
+
 button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-elev));
+  transform: translateY(-1px);
 }
 
-AuthForm {
-
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-    --main-bg: #ffffff;
-    --borderCardColor: #242424;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-}
-
-@keyframes rainbowSpin {
-    0%   { background-position: 0% 50%; }
-    100% { background-position: 200% 50%; }
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --main-text: #ffffff;
-    --main-bg: #242424;
-    --button-bg: #1a1a1a;
-    --borderCardColor: #e5e7eb;
-
-    color: var(--main-text);
-    background-color: var(--main-bg);
-  }
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  outline: 2px dashed var(--accent);
+  outline-offset: 2px;
 }

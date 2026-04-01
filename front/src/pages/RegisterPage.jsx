@@ -21,7 +21,7 @@ export default function RegisterPage() {
             }
         } catch (err) {
             console.error(err);
-            setMessage("Registration failed.");
+            setMessage('Registration failed.');
         }
     };
 
@@ -32,10 +32,10 @@ export default function RegisterPage() {
     return (
         <div className="wrapper">
             <div className="card">
-                <AuthForm title="Create Account" buttonText="Register" auth_fn={registerUserFn} />
+                <AuthForm title="Create account" buttonText="Sign up" auth_fn={registerUserFn} />
             </div>
             <div className="footer">
-                Already have an account? Login here: <Link to="/login" state={{ from: location.state?.from || location }}>Sign In</Link>
+                Already registered? <Link to="/login" state={{ from: location.state?.from || location }}>Log in here</Link>
             </div>
         </div>
     );

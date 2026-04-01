@@ -1,37 +1,176 @@
-.btn-start-game {
-    font-size: 1.3em;
+.game-page {
+    --gp-line: var(--line);
+    --gp-surface: var(--bg-elev);
+    --gp-surface-soft: color-mix(in srgb, var(--bg-elev) 84%, white);
+    --gp-ink: var(--ink);
+    --gp-muted: var(--muted);
+    --gp-accent: var(--accent);
+    --gp-accent-soft: #ffd88f;
+    --gp-danger: var(--danger);
+    --gp-ok: var(--ok);
+
+    width: min(1240px, 100% - 1.4rem);
+    margin: 1rem auto 2rem;
+    display: grid;
+    gap: 0.7rem;
+    text-align: left;
 }
 
-.GameTools{
-    margin: 0.6em;
+.game-header-row {
     display: flex;
-    flex-direction: row;
-    gap: 1em;
+    flex-wrap: wrap;
+    gap: 0.7rem;
     align-items: center;
-    justify-content: center;
-}
-.GameTools button {
-    margin: 0.2em;
-}
-.GameTools input{
-    margin: 0.1
-}
-.GameTools .timer-display {
-    font-size: 2rem;
+    justify-content: space-between;
 }
 
-canvas{
-    border-radius: 20px;
+.game-header-row h1 {
+    font-size: clamp(1.6rem, 3.2vw, 2.8rem);
+    letter-spacing: 0.06em;
+}
+
+.game-feedback-strip {
+    display: grid;
+    gap: 0.55rem;
+}
+
+.game-main-grid {
+    display: block;
+}
+
+.play-column,
+.status-column {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.error-message,
+.info-message,
+.ready-up-container,
+.multiplayer-status-panel,
+.category-display,
+.GameTools {
+    border: 1px solid var(--gp-line);
+    background: var(--gp-surface);
+    padding: 0.62rem 0.72rem;
+}
+
+.info-message {
+    border-left: 4px solid var(--gp-accent);
+    color: var(--gp-ink);
+}
+
+.error-message {
+    border-left: 4px solid var(--gp-danger);
+    color: color-mix(in srgb, var(--gp-danger) 82%, var(--gp-ink));
+}
+
+.button-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.game-page button {
+    border: 1px solid var(--gp-line);
+    background: var(--gp-surface-soft);
+    color: var(--gp-ink);
+}
+
+.game-page button:disabled {
+    border-color: color-mix(in srgb, var(--gp-line) 75%, white);
+    background: color-mix(in srgb, var(--gp-surface) 72%, white);
+    color: color-mix(in srgb, var(--gp-muted) 74%, var(--gp-ink));
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+    opacity: 1;
+}
+
+.btn-start-game {
+    border-color: var(--gp-accent);
+    background: color-mix(in srgb, var(--gp-accent) 22%, var(--gp-surface));
+    color: var(--gp-ink);
+}
+
+.btn-unready {
+    background: color-mix(in srgb, var(--gp-surface) 86%, white);
+}
+
+.btn-ready {
+    border-color: var(--gp-ok);
+    background: color-mix(in srgb, var(--gp-ok) 20%, var(--gp-surface));
+    color: var(--gp-ink);
+}
+
+.multiplayer-status-panel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+}
+
+.multiplayer-status-panel p {
+    margin: 0;
+    color: var(--gp-muted);
+}
+
+.category-display h2,
+.category-display p {
+    margin: 0;
+}
+
+.GameTools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+}
+
+.game-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.tool-buttons {
+    display: flex;
+    gap: 0.45rem;
+}
+
+.tool-btn {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.tool-btn.active {
+    background: color-mix(in srgb, var(--gp-accent) 32%, var(--gp-surface));
+    border-color: var(--gp-accent);
+}
+
+.brush-size-control {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: var(--gp-muted);
+}
+
+.size-value {
+    color: var(--gp-ink);
+    min-width: 40px;
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 0.03em;
 }
 
 .CanvasContainer {
-  display: flex;
-  flex-direction: row;
-  gap: 1em;;
-  align-items: center;
-  margin-top: 1em;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.6rem;
+    align-items: start;
 }
 
+<<<<<<< HEAD
 /*
 .CanvasContainer .mainCanvas{
     {width: 40em;
@@ -96,4 +235,228 @@ canvas{
 
 .backHomeLabel {
     line-height: 1;
+=======
+.canvas-stage {
+    position: relative;
+    display: inline-block;
+    width: fit-content;
+}
+
+.canvas-overlay {
+    position: absolute;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    gap: 0.45rem;
+    padding: 0.45rem;
+    pointer-events: none;
+    z-index: 4;
+}
+
+.canvas-overlay-top {
+    top: 0;
+}
+
+.canvas-overlay-middle {
+    top: 42px;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+}
+
+.canvas-overlay-bottom {
+    bottom: 0;
+    justify-content: flex-start;
+}
+
+.hud-chip {
+    border: 1px solid color-mix(in srgb, var(--gp-line) 78%, white);
+    background: color-mix(in srgb, var(--gp-surface) 84%, white);
+    color: var(--gp-ink);
+    padding: 0.28rem 0.48rem;
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-family: 'Barlow Condensed', sans-serif;
+    line-height: 1.1;
+    backdrop-filter: blur(2px);
+}
+
+.hud-target {
+    display: flex;
+    align-items: baseline;
+    gap: 0.32rem;
+}
+
+.hud-target strong {
+    font-size: 0.96rem;
+}
+
+.hud-timer {
+    border-color: var(--gp-accent);
+    color: color-mix(in srgb, var(--gp-accent) 56%, var(--gp-ink));
+    font-size: 1rem;
+}
+
+.hud-round {
+    border-color: color-mix(in srgb, var(--gp-line) 72%, white);
+    color: var(--gp-ink);
+}
+
+.hud-score {
+    border-color: color-mix(in srgb, var(--gp-line) 62%, white);
+    color: color-mix(in srgb, var(--gp-line) 45%, var(--gp-ink));
+}
+
+.hud-progress {
+    border-color: var(--gp-accent-soft);
+    color: color-mix(in srgb, var(--gp-accent-soft) 62%, var(--gp-ink));
+}
+
+.hud-prediction.good {
+    border-color: var(--gp-ok);
+    color: color-mix(in srgb, var(--gp-ok) 58%, var(--gp-ink));
+}
+
+.mainCanvas,
+.opponentCanvas,
+canvas {
+    border-radius: 0;
+    border: 1px solid color-mix(in srgb, var(--gp-line) 68%, var(--gp-ink));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--gp-line) 76%, white);
+}
+
+.opponentCanvas {
+    opacity: 0.95;
+}
+
+.finish-banner {
+    border: 2px solid var(--gp-accent-soft);
+    background: color-mix(in srgb, var(--gp-accent-soft) 24%, var(--gp-surface));
+    color: var(--gp-ink);
+    padding: 0.72rem 0.86rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 1.15rem;
+    animation: finishBannerIn 380ms ease-out;
+}
+
+.game-bottom-notices {
+    min-height: 72px;
+    display: grid;
+    gap: 0.45rem;
+    align-content: start;
+}
+
+.ready-up-container h3 {
+    margin-bottom: 0.45rem;
+}
+
+.players-status {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.player-status {
+    padding: 0.38rem 0.42rem;
+    color: var(--muted);
+}
+
+.status-indicator {
+    color: var(--ink);
+    font-weight: 600;
+}
+
+.you-indicator {
+    color: var(--gp-accent);
+}
+
+.ready-up-buttons {
+    margin-top: 0.55rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.hit-pulse .mainCanvas,
+.hit-pulse .hud-timer {
+    animation: hitPulse 420ms ease-out;
+}
+
+.round-pulse .multiplayer-status-panel {
+    animation: roundPulse 680ms ease-out;
+}
+
+.match-end-pulse .finish-banner {
+    animation: finishBannerIn 420ms ease-out;
+}
+
+@keyframes hitPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(141, 242, 183, 0.55);
+    }
+    100% {
+        box-shadow: 0 0 0 16px rgba(141, 242, 183, 0);
+    }
+}
+
+@keyframes roundPulse {
+    0% {
+        transform: translateX(0);
+        border-color: var(--gp-line);
+    }
+    35% {
+        transform: translateX(4px);
+        border-color: var(--gp-accent-soft);
+    }
+    100% {
+        transform: translateX(0);
+        border-color: var(--gp-line);
+    }
+}
+
+@keyframes finishBannerIn {
+    0% {
+        transform: translateY(-8px);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@media (max-width: 980px) {
+    .game-main-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .CanvasContainer {
+        grid-template-columns: 1fr;
+    }
+
+    .opponentCanvas {
+        justify-self: start;
+    }
+
+    .canvas-overlay-middle {
+        top: 39px;
+    }
+}
+
+@media (max-width: 700px) {
+    .canvas-overlay {
+        padding: 0.35rem;
+    }
+
+    .hud-chip {
+        font-size: 0.72rem;
+        padding: 0.22rem 0.38rem;
+    }
+
+    .hud-target strong {
+        font-size: 0.86rem;
+    }
+>>>>>>> origin/main
 }
