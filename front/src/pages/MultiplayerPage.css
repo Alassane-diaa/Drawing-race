@@ -1,0 +1,94 @@
+.multiplayer-page {
+    width: min(980px, 100% - 1.4rem);
+    margin: 1rem auto 2rem;
+    display: grid;
+    gap: 0.7rem;
+}
+
+.welcome-section,
+.game-actions-section,
+.lobby-game-card,
+.error-message {
+    border: 1px solid var(--line);
+    background: var(--bg-elev);
+    padding: 0.75rem;
+}
+
+.message {
+    margin: 0;
+    color: var(--muted);
+}
+
+.game-actions-section h2 {
+    margin: 0 0 0.55rem;
+}
+
+.action-buttons,
+.join-specific-game,
+.game-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.join-specific-game {
+    margin-top: 0.65rem;
+}
+
+.game-id-input {
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--bg-elev) 88%, white);
+    color: var(--ink);
+    padding: 0.55rem 0.65rem;
+    border-radius: 2px;
+    min-width: 220px;
+    flex: 1;
+}
+
+.game-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+}
+
+.status-badge {
+    border: 1px solid var(--line);
+    color: var(--muted);
+    padding: 0.2rem 0.45rem;
+    font-size: 0.76rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.game-players {
+    display: grid;
+    gap: 0.45rem;
+    margin-top: 0.5rem;
+}
+
+.player {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+    border-left: 3px solid var(--line);
+    padding: 0.3rem 0.45rem;
+}
+
+.player-label,
+.you-badge {
+    color: var(--muted);
+}
+
+.ready-status.ready {
+    color: var(--ok);
+}
+
+.ready-status.not-ready {
+    color: var(--danger);
+}
+
+.error-message {
+    border-left: 4px solid var(--danger);
+}

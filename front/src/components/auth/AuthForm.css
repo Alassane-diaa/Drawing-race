@@ -1,0 +1,27 @@
+.auth-form {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.auth-form h2 {
+    margin: 0;
+}
+
+.auth-form input {
+    width: 100%;
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--bg-elev) 88%, white);
+    color: var(--ink);
+    border-radius: 2px;
+    padding: 0.55rem 0.65rem;
+}
+
+.auth-form button {
+    justify-self: start;
+}
+
+.auth-message {
+    min-height: 1rem;
+    color: var(--danger);
+    font-size: 0.84rem;
+}

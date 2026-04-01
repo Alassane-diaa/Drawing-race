@@ -13,13 +13,22 @@ export default function LobbyGameCard({ game, playerName, onMarkReady, onStartGa
     const bothPlayersReady = game.player1Ready && game.player2Ready && game.player2Name;
     const canPlayer2Ready = game.status === 'IN_PROGRESS' && isPlayer2;
     const canHostStart = game.status === 'IN_PROGRESS' && isPlayer1 && bothPlayersReady;
+    const statusLabel = game.status === 'WAITING'
+        ? 'WAITING'
+        : game.status === 'IN_PROGRESS'
+        ? 'READY UP'
+        : game.status === 'STARTED'
+        ? 'IN GAME'
+        : game.status === 'FINISHED'
+        ? 'FINISHED'
+        : game.status;
 
     return (
         <div className="lobby-game-card">
             <div className="game-header">
                 <h3>Game: {game.gameId}</h3>
                 <span className={`status-badge ${game.status.toLowerCase()}`}>
-                    {game.status}
+                    {statusLabel}
                 </span>
             </div>
 
@@ -37,7 +46,7 @@ export default function LobbyGameCard({ game, playerName, onMarkReady, onStartGa
                     <div className="player">
                         <span className="player-label">Player 2:</span>
                         <span className="player-name">
-                            {game.player2Name || 'Waiting for player...'}
+                            {game.player2Name || 'Waiting for a second player...'}
                         </span>
                         {game.player2Name && (
                             <span className={`ready-status ${game.player2Ready ? 'ready' : 'not-ready'}`}>
@@ -57,7 +66,7 @@ export default function LobbyGameCard({ game, playerName, onMarkReady, onStartGa
                             className="btn-ready"
                             disabled={!canPlayer2Ready}
                         >
-                            {game.player2Ready ? 'Ready' : 'Mark as Ready'}
+                            {game.player2Ready ? 'Ready' : 'Mark as ready'}
                         </button>
                     )}
                     {isPlayer1 && (
@@ -66,7 +75,7 @@ export default function LobbyGameCard({ game, playerName, onMarkReady, onStartGa
                             className="btn-start"
                             disabled={!onStartGame || !canHostStart}
                         >
-                            Start Game
+                            Start
                         </button>
                     )}
                 </div>

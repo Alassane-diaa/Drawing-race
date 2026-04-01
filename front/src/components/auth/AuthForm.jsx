@@ -1,4 +1,5 @@
 import { useState } from "react";
+import './AuthForm.css';
 
 export default function AuthForm({ title, buttonText, auth_fn }) {
     const [user, setUser] = useState({ username: "", password: "" });
@@ -6,12 +7,13 @@ export default function AuthForm({ title, buttonText, auth_fn }) {
 
     const setMessageFn = (msg) => setMessage(msg);
 
-    const handleSubmit = () => {
+    const handleSubmit = (event) => {
+        event.preventDefault();
         auth_fn(user, setMessageFn);
     };
 
     return (
-        <div>
+        <form className="auth-form" onSubmit={handleSubmit}>
             <h2>{title}</h2>
             <input 
                 placeholder="Username"
@@ -24,10 +26,10 @@ export default function AuthForm({ title, buttonText, auth_fn }) {
                 value={user.password}
                 onChange={(e) => setUser({...user, password: e.target.value})}
             />
-            <button onClick={handleSubmit}>
+            <button type="submit">
                 {buttonText}
             </button>
-            <div>{message}</div>
-        </div>
+            <div className="auth-message">{message}</div>
+        </form>
     );
 }

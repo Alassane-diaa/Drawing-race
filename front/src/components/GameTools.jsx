@@ -16,30 +16,30 @@ export default function GameTools({
                 <button
                     className={`tool-btn ${brushState === 'pen' ? 'active' : ''}`}
                     onClick={() => onBrushStateChange('pen')}
-                    title="Switch to pen"
+                    title="Passer en mode crayon"
                 >
-                    Pen
+                    Crayon
                 </button>
 
                 <button
                     className={`tool-btn ${brushState === 'eraser' ? 'active' : ''}`}
                     onClick={() => onBrushStateChange('eraser')}
-                    title="Switch to eraser"
+                    title="Passer en mode gomme"
                 >
-                    Eraser
+                    Gomme
                 </button>
 
                 <button
                     className="tool-btn clear-btn"
                     onClick={onClear}
-                    title="Clear canvas"
+                    title="Effacer le canvas"
                 >
-                    Clear
+                    Effacer
                 </button>
             </div>
 
             <div className="brush-size-control">
-                <label htmlFor="brush-size">Brush Size:</label>
+                <label htmlFor="brush-size">Taille du trait :</label>
                 <input
                     id="brush-size"
                     type="range"
@@ -47,7 +47,7 @@ export default function GameTools({
                     onChange={(e) => onBrushSizeChange(parseInt(e.target.value))}
                     min="1"
                     max="50"
-                    title="Adjust brush size"
+                    title="Ajuster la taille du trait"
                 />
                 <span className="size-value">{brushSize}px</span>
             </div>

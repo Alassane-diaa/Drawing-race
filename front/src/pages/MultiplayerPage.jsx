@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import './MultiplayerPage.css';
 
 // Services
 import {
@@ -86,9 +87,9 @@ export default function MultiplayerPage() {
     // Update welcome message when user changes
     useEffect(() => {
         if (!isUser) {
-            setMessage('Please login first');
+            setMessage('Sign in to access multiplayer mode.');
         } else {
-            setMessage(`Welcome, ${user.username}!`);
+            setMessage(`Welcome ${user.username}, ready for a round?`);
         }
     }, [isUser, user]);
 
@@ -144,7 +145,7 @@ export default function MultiplayerPage() {
 
     async function handleCreateGame() {
         if (!isUser) {
-            setError('Please login first');
+            setError('Sign in first.');
             return;
         }
 
@@ -163,12 +164,12 @@ export default function MultiplayerPage() {
 
     async function handleJoinGame() {
         if (!isUser) {
-            setError('Please login first');
+            setError('Sign in first.');
             return;
         }
 
         if (!gameIdInput.trim()) {
-            setError('Please enter a game ID');
+            setError('Enter a game ID.');
             return;
         }
 
@@ -187,7 +188,7 @@ export default function MultiplayerPage() {
 
     async function handleJoinRandomGame() {
         if (!isUser) {
-            setError('Please login first');
+            setError('Sign in first.');
             return;
         }
 
@@ -249,7 +250,7 @@ export default function MultiplayerPage() {
 
             {/* Game Actions */}
             <div className="game-actions-section">
-                <h2>Join or Create a Game</h2>
+                <h2>Join or create a game</h2>
                 
                 <div className="action-buttons">
                     <button
@@ -257,7 +258,7 @@ export default function MultiplayerPage() {
                         disabled={!isUser || isLoading}
                         className="btn-create"
                     >
-                        {isLoading ? 'Creating...' : 'Create Game'}
+                        {isLoading ? 'Creating...' : 'Create game'}
                     </button>
 
                     <button
@@ -265,14 +266,14 @@ export default function MultiplayerPage() {
                         disabled={!isUser || isLoading}
                         className="btn-join-random"
                     >
-                        {isLoading ? 'Joining...' : 'Join Random Game'}
+                        {isLoading ? 'Connecting...' : 'Join random game'}
                     </button>
                 </div>
 
                 <div className="join-specific-game">
                     <input
                         type="text"
-                        placeholder="Enter Game ID"
+                        placeholder="Game ID"
                         value={gameIdInput}
                         onChange={(e) => setGameIdInput(e.target.value)}
                         disabled={isLoading}
@@ -283,7 +284,7 @@ export default function MultiplayerPage() {
                         disabled={!isUser || !gameIdInput.trim() || isLoading}
                         className="btn-join"
                     >
-                        {isLoading ? 'Joining...' : 'Join Game'}
+                        {isLoading ? 'Connecting...' : 'Join'}
                     </button>
                 </div>
             </div>

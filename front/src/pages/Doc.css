@@ -1,0 +1,60 @@
+.doc-page {
+    width: min(980px, 100% - 1.4rem);
+    margin: 1rem auto 2rem;
+}
+
+.doc-panel {
+    border: 1px solid var(--line);
+    background: var(--bg-elev);
+    padding: 0.85rem;
+}
+
+.doc-panel h1 {
+    margin: 0;
+    font-size: clamp(1.5rem, 2.4vw, 2.2rem);
+}
+
+.doc-panel p {
+    margin: 0.45rem 0 0;
+    color: var(--muted);
+}
+
+.doc-actions {
+    margin-top: 0.8rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.doc-actions a {
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--bg-elev) 90%, white);
+    color: var(--ink);
+    padding: 0.48rem 0.7rem;
+    border-radius: 2px;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.doc-actions .cta {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 24%, var(--bg-elev));
+}
+
+.doc-quickstart {
+    margin-top: 0.95rem;
+    border-top: 1px solid var(--line);
+    padding-top: 0.75rem;
+}
+
+.doc-quickstart h2 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.doc-quickstart ol {
+    margin: 0.5rem 0 0;
+    padding-left: 1rem;
+    color: var(--muted);
+}

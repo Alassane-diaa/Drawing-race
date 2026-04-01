@@ -1,3 +1,130 @@
-button{
-    margin: 30em;
+.race-lobby {
+    width: min(1080px, 100% - 2rem);
+    margin: 1.2rem auto 2rem;
+    display: grid;
+    gap: 0.85rem;
+    text-align: left;
+}
+
+.race-hero,
+.race-difficulty,
+.race-actions,
+.race-footer {
+    border: 1px solid var(--line);
+    background: var(--bg-elev);
+    padding: 0.8rem 0.95rem;
+}
+
+.race-hero {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.9rem;
+    align-items: center;
+}
+
+.race-logo {
+    width: 68px;
+    height: 68px;
+    object-fit: contain;
+    background: color-mix(in srgb, var(--bg-elev) 84%, white);
+    border: 1px solid var(--line);
+    padding: 0.35rem;
+}
+
+.eyebrow {
+    margin: 0;
+    color: var(--accent);
+    font-size: 0.76rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.race-hero h1 {
+    margin-top: 0.2rem;
+    font-size: clamp(1.9rem, 4vw, 3.1rem);
+    line-height: 0.96;
+}
+
+.hero-copy {
+    margin: 0.5rem 0 0;
+    color: var(--muted);
+}
+
+.race-difficulty h3 {
+    font-size: 1.15rem;
+}
+
+.difficulty-row {
+    margin-top: 0.55rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.difficulty-chip {
+    min-width: 100px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.difficulty-chip.active {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 20%, var(--bg-elev));
+    color: var(--ink);
+}
+
+.race-actions {
+    display: grid;
+    gap: 0.7rem;
+}
+
+.start-race-btn {
+    justify-self: start;
+    padding: 0.7rem 1.15rem;
+    border-color: var(--accent);
+    background: var(--accent-deep);
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+}
+
+.secondary-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.connected-label {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.race-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.6rem;
+    color: var(--muted);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+@media (max-width: 800px) {
+    .race-lobby {
+        width: min(1080px, 100% - 1rem);
+    }
+
+    .race-hero {
+        grid-template-columns: 1fr;
+    }
+
+    .race-logo {
+        width: 58px;
+        height: 58px;
+    }
+
+    .race-footer {
+        flex-direction: column;
+    }
 }

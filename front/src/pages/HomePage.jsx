@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import icon from "../resources/images/iconeV1.png";
-import './HomePage'
+import './HomePage.css'
 
 export default function HomePage() {
     const [difficulty, setDifficulty] = useState("medium");
@@ -13,52 +13,58 @@ export default function HomePage() {
     const handleStartGame = () => {
     navigate("/solo/game", { state: { difficulty } });
     };
+
+    const difficultyLabel = difficulty === 'easy'
+        ? 'Easy'
+        : difficulty === 'medium'
+        ? 'Medium'
+        : 'Hard';
+
   return (
-    <div className="pageContainer">
-        <header>
-            <img className="logo" src={icon} title="une image mims a changer"/>
-            <h1>Welcome to the Game</h1>
+    <div className="race-lobby">
+        <header className="race-hero">
+            <img className="race-logo" src={icon} title="Logo du jeu"/>
+            <div>
+                <p className="eyebrow">Advanced Software Engineering Project</p>
+                <h1>Draw fast. Guess right. Win rounds.</h1>
+                <p className="hero-copy">A quick drawing game where your sketch impacts the result: practice in solo, compete in multiplayer.</p>
+
+            </div>
         </header>
 
-        <div className="difficulty-selector">
-            <h3>Select Difficulty :</h3>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: '15px' }}>
+        <section className="race-difficulty">
+            <h3>Choose difficulty</h3>
+            <div className="difficulty-row">
                 {['easy', 'medium', 'hard'].map((level) => (
                     <button
                         key={level}
                         onClick={() => setDifficulty(level)}
-                        style={{
-                            padding: '10px 20px',
-                            backgroundColor: difficulty === level ? '#4CAF50' : '#ddd',
-                            color: difficulty === level ? 'white' : 'black',
-                            borderRadius: '5px',
-                            cursor: 'pointer',
-                            border: 'none'
-                        }}
+                        className={`difficulty-chip ${difficulty === level ? 'active' : ''}`}
                     >
-                        {level.charAt(0).toUpperCase() + level.slice(1)}
+                        {level === 'easy' ? 'Easy' : level === 'medium' ? 'Medium' : 'Hard'}
                     </button>
                 ))}
             </div>
-        </div>
+        </section>
 
-        <main className="content">
-            {/* Navigate au lieu de Link pour envoyer difficulté */}
-            <button className="grosBouton" onClick={handleStartGame}>Play</button>
-            <div>
-                {!isUser && <Link to="/login"> <button>Se connecter</button> </Link>}
-                {!isUser && <Link to="/register"> <button>Créer un compte</button> </Link>}
-                <Link to="/play"> <button>Multiplayer</button> </Link>
-                {isUser && <Link to="/stats"> <button>Stats</button> </Link>}
-                {isUser && <button onClick={logout}>Se déconnecter</button>}
+        <main className="race-actions">
+            <button className="start-race-btn" onClick={handleStartGame}>Start solo game</button>
+
+            <div className="secondary-actions">
+                {!isUser && <Link to="/login"><button>Log in</button></Link>}
+                {!isUser && <Link to="/register"><button>Create account</button></Link>}
+                <Link to="/play"><button>Multiplayer</button></Link>
+                {isUser && <Link to="/stats"><button>Stats</button></Link>}
+                {isUser && <button onClick={logout}>Log out</button>}
             </div>
-            {isUser && user?.username && <p>Connecté: {user.username}</p>}
-        </main>
-        
 
-        <nav className= "footer">
-            <h3>Projet Advanced Software Engineering</h3>
-        </nav>
+            {isUser && user?.username && <p className="connected-label">Signed in as: {user.username}</p>}
+        </main>
+
+        <footer className="race-footer">
+            <span>ASE Project</span>
+            <span>Real-time drawing and prediction game</span>
+        </footer>
     </div>
   )
 }

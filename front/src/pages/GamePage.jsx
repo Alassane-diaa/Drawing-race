@@ -29,7 +29,6 @@ import { useGameLogic } from '../hooks/useGameLogic';
 // Components
 import ReadyUpUI from '../components/ReadyUpUI';
 import GameTools from '../components/GameTools';
-import PredictionDisplay from '../components/PredictionDisplay';
 
 // Constants
 //const MAIN_CANVAS_WIDTH = 800;
@@ -47,10 +46,12 @@ export default function GamePage() {
 
     useEffect(() => {
         function redimensionner() {
-        // On veut que le canvas fasse 40% de la largeur de la fenêtre
-        // mais on garde une taille max ET un ratio pour ne pas tout casser
-        const nouvelleLargeur = Math.min(window.innerWidth * 0.4, 800);
-        const nouvelleHauteur = (nouvelleLargeur * 3) / 4;
+        // Canvas plus grand sur desktop, quasi pleine largeur sur mobile.
+        const largeurDisponible = window.innerWidth < 900
+            ? window.innerWidth - 26
+            : window.innerWidth * 0.58;
+        const nouvelleLargeur = Math.max(320, Math.min(largeurDisponible, 980));
+        const nouvelleHauteur = (nouvelleLargeur * 3) / 5;
 
         setDimensions({
             width: nouvelleLargeur,
@@ -58,7 +59,7 @@ export default function GamePage() {
         });
         }
 
-    // On appelle quand il faut j'espère
+    // Trigger an AI prediction only when we are in an active round.
     window.addEventListener('resize', redimensionner);
     redimensionner();
 
@@ -94,9 +95,13 @@ export default function GamePage() {
     const [multiplayerTimeLeft, setMultiplayerTimeLeft] = useState(0);
     const [infoMessage, setInfoMessage] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
+    const [isHitPulseActive, setIsHitPulseActive] = useState(false);
+    const [isRoundPulseActive, setIsRoundPulseActive] = useState(false);
+    const [isMatchEndPulseActive, setIsMatchEndPulseActive] = useState(false);
     const announcedRoundRef = useRef(0);
     const timeoutHandledRoundRef = useRef('');
     const clearedRoundRef = useRef('');
+    const lastHitKeyRef = useRef('');
     const isHost = multiplayer && playerName && gameState?.player1Name === playerName;
     const isPlayer2 = multiplayer && playerName && gameState?.player2Name === playerName;
 
@@ -180,6 +185,32 @@ export default function GamePage() {
         handleStrokeComplete,
         handleCanvasClear
     );
+
+    const activePredictionData = multiplayer ? multiplayerPredictionData : gameLogic.predictionData;
+    const activeTargetCategory = multiplayer ? gameState?.targetCategory : gameLogic.targetCategory;
+
+    const isCurrentPredictionCorrect = Boolean(
+        activePredictionData?.prediction?.category
+        && activeTargetCategory
+        && activePredictionData.prediction.category === activeTargetCategory
+    );
+    const predictionLabel = activePredictionData?.prediction?.category || '...';
+    const predictionConfidence = ((activePredictionData?.prediction?.confidence || 0) * 100).toFixed(1);
+    const timerLabel = multiplayer
+        ? `00:${multiplayerTimeLeft < 10 ? `0${multiplayerTimeLeft}` : multiplayerTimeLeft}`
+        : gameLogic.hasStartedGame
+        ? `00:${gameLogic.timeLeft < 10 ? `0${gameLogic.timeLeft}` : gameLogic.timeLeft}`
+        : '--:--';
+    const scoreLabel = multiplayer && gameState
+        ? `${gameState.player1Name}: ${gameState.player1RoundsWon} | ${gameState.player2Name || 'Player 2'}: ${gameState.player2RoundsWon}`
+        : null;
+    const roundLabel = multiplayer && gameState
+        ? `Round ${gameState.currentRound}/${gameState.totalRounds}`
+        : null;
+    const roundProgressLabel = multiplayer && gameState?.status === 'STARTED' && gameState?.roundActive
+        ? `Progress ${ (gameState.player1BestConfidence * 100).toFixed(1)}% | ${(gameState.player2BestConfidence * 100).toFixed(1)}%`
+        : null;
+    const canStartSoloGame = !gameLogic.hasStartedGame;
 
     // WebSocket hook for game updates
     const { clientRef: stompClientRef } = useGameWebsocket({
@@ -280,14 +311,59 @@ export default function GamePage() {
     }
 
     function handleTimeUp(category) {
-        setInfoMessage(`Temps écoulé. Catégorie attendue: ${category}`);
+        setInfoMessage(`Time's up. Expected category: ${category}`);
         gameLogic.resetGame();
     }
 
     function handleVictory(category, confidence) {
-        setInfoMessage(`Bravo. L'IA a reconnu: ${category} (${(confidence * 100).toFixed(2)}%)`);
+        setIsHitPulseActive(true);
+        setInfoMessage(`Great. AI recognized: ${category} (${(confidence * 100).toFixed(2)}%)`);
         gameLogic.resetGame();
     }
+
+    useEffect(() => {
+        if (!isCurrentPredictionCorrect) {
+            return;
+        }
+
+        const predictionCategory = activePredictionData?.prediction?.category || '';
+        const predictionConfidence = (activePredictionData?.prediction?.confidence || 0).toFixed(3);
+        const hitKey = `${predictionCategory}-${predictionConfidence}-${activeTargetCategory || ''}`;
+
+        if (hitKey === lastHitKeyRef.current) {
+            return;
+        }
+
+        lastHitKeyRef.current = hitKey;
+        setIsHitPulseActive(true);
+    }, [isCurrentPredictionCorrect, activePredictionData, activeTargetCategory]);
+
+    useEffect(() => {
+        if (!isHitPulseActive) {
+            return;
+        }
+
+        const timeout = setTimeout(() => setIsHitPulseActive(false), 520);
+        return () => clearTimeout(timeout);
+    }, [isHitPulseActive]);
+
+    useEffect(() => {
+        if (!isRoundPulseActive) {
+            return;
+        }
+
+        const timeout = setTimeout(() => setIsRoundPulseActive(false), 760);
+        return () => clearTimeout(timeout);
+    }, [isRoundPulseActive]);
+
+    useEffect(() => {
+        if (!isMatchEndPulseActive) {
+            return;
+        }
+
+        const timeout = setTimeout(() => setIsMatchEndPulseActive(false), 1800);
+        return () => clearTimeout(timeout);
+    }, [isMatchEndPulseActive]);
 
     useEffect(() => {
         if (!multiplayer || !gameState) {
@@ -296,18 +372,20 @@ export default function GamePage() {
 
         if (gameState.lastRoundNumber > 0 && gameState.lastRoundNumber !== announcedRoundRef.current) {
             announcedRoundRef.current = gameState.lastRoundNumber;
+            setIsRoundPulseActive(true);
             if (gameState.lastRoundResult === 'TIE') {
-                setInfoMessage(`Manche ${gameState.lastRoundNumber}: égalité.`);
+                setInfoMessage(`Round ${gameState.lastRoundNumber}: tie.`);
             } else if (gameState.lastRoundWinnerName) {
-                setInfoMessage(`Manche ${gameState.lastRoundNumber}: ${gameState.lastRoundWinnerName} gagne.`);
+                setInfoMessage(`Round ${gameState.lastRoundNumber}: ${gameState.lastRoundWinnerName} wins.`);
             }
         }
 
         if (gameState.status === 'FINISHED') {
+            setIsMatchEndPulseActive(true);
             if (gameState.matchWinnerName) {
-                setInfoMessage(`Partie terminée: ${gameState.matchWinnerName} remporte le match.`);
+                setInfoMessage(`Match finished: ${gameState.matchWinnerName} wins.`);
             } else {
-                setInfoMessage('Partie terminée: match nul.');
+                setInfoMessage('Match finished: draw.');
             }
         }
     }, [multiplayer, gameState]);
@@ -376,7 +454,7 @@ export default function GamePage() {
             const updatedGame = await markPlayerReady(gameId, playerName);
             setGameState(updatedGame);
         } catch (error) {
-            setErrorMessage(`Failed to mark as ready: ${error.message}`);
+            setErrorMessage(`Failed to mark ready: ${error.message}`);
         }
     }
 
@@ -388,7 +466,7 @@ export default function GamePage() {
             const updatedGame = await markPlayerNotReady(gameId, playerName);
             setGameState(updatedGame);
         } catch (error) {
-            setErrorMessage(`Failed to mark as not ready: ${error.message}`);
+            setErrorMessage(`Failed to mark not ready: ${error.message}`);
         }
     }
 
@@ -437,7 +515,7 @@ export default function GamePage() {
             const updatedGame = await restartGame(gameId, playerName);
             setGameState(updatedGame);
             setGameReady(false);
-            setInfoMessage('Match relancé. Le host peut démarrer immédiatement.');
+            setInfoMessage('Match restarted. Host can start immediately.');
             drawingControl.hardResetCanvas();
             opponentStrokesRef.current = [];
             drawCenteredOnCanvas(canvasRefOpponent.current, []);
@@ -454,7 +532,7 @@ export default function GamePage() {
             const updatedGame = await stopGame(gameId, playerName);
             setGameState(updatedGame);
             setGameReady(false);
-            setInfoMessage('Partie arrêtée. Retour au lobby.');
+            setInfoMessage('Game stopped. Back to lobby.');
             drawingControl.hardResetCanvas();
             opponentStrokesRef.current = [];
             drawCenteredOnCanvas(canvasRefOpponent.current, []);
@@ -485,20 +563,58 @@ export default function GamePage() {
     // ============ Render ============
 
     return (
-        <div className="game-page">
-            <h1>Quick, Draw!</h1>
+        <div className={`game-page ${isHitPulseActive ? 'hit-pulse' : ''} ${isRoundPulseActive ? 'round-pulse' : ''} ${isMatchEndPulseActive ? 'match-end-pulse' : ''}`}>
+            <header className="game-header-row">
+                <h1>Quick, Draw!</h1>
 
-            {errorMessage && (
-                <div className="error-message">
-                    <p>{errorMessage}</p>
-                </div>
-            )}
+                {!multiplayer && (
+                    <div className="button-group">
+                        <button
+                            className="btn-start-game"
+                            onClick={gameLogic.startNewGame}
+                            disabled={!canStartSoloGame}
+                            title={canStartSoloGame ? 'Start a solo match' : 'A solo match is already running'}
+                        >
+                            {canStartSoloGame ? 'Start solo game' : 'Solo in progress'}
+                        </button>
+                    </div>
+                )}
 
-            {infoMessage && (
-                <div className="info-message">
-                    <p>{infoMessage}</p>
-                </div>
-            )}
+                {multiplayer && gameState?.status !== 'IN_PROGRESS' && (
+                    <div className="button-group">
+                        {isHost && (
+                            <button
+                                className="btn-unready"
+                                onClick={handleStopGame}
+                                disabled={!gameId}
+                                title={!gameId ? 'Lobby not found' : 'Stop current game'}
+                            >
+                                Stop game
+                            </button>
+                        )}
+
+                        {isHost && gameState?.status === 'FINISHED' && (
+                            <button
+                                className="btn-start-game"
+                                onClick={handleRestartGame}
+                                disabled={!gameId}
+                                title={!gameId ? 'Lobby not found' : 'Restart match'}
+                            >
+                                Restart
+                            </button>
+                        )}
+
+                        <button
+                            className="btn-unready"
+                            onClick={handleQuitCurrentMatch}
+                            disabled={!gameId}
+                            title={!gameId ? 'Lobby not found' : 'Leave match'}
+                        >
+                            Quit match
+                        </button>
+                    </div>
+                )}
+            </header>
 
             {/* Multiplayer Ready-Up Interface */}
             {multiplayer && gameState && !gameReady && (
@@ -514,141 +630,108 @@ export default function GamePage() {
                 />
             )}
 
-            {/* Start Game Button (solo only) */}
-            {!multiplayer && (
-                <div className="button-group">
-                    <button
-                        className="btn-start-game"
-                        onClick={gameLogic.startNewGame}
-                        disabled={gameLogic.hasStartedGame}
-                    >
-                        Start Solo Game
-                    </button>
+            <section className="game-main-grid">
+                <div className="play-column">
+                    {/* Category Display */}
+                    <div className="category-display">
+                        {multiplayer && !gameReady && <p>Waiting for game start...</p>}
+                        {multiplayer && gameState?.status === 'FINISHED' && <p>Game finished.</p>}
+                        {!multiplayer && !gameLogic.hasStartedGame && <p>Start a game to begin drawing.</p>}
+                    </div>
+
+                    {/* Drawing Tools */}
+                    <div className="GameTools">
+                        <GameTools
+                            brushState={drawingControl.brushState}
+                            brushSize={drawingControl.brushSize}
+                            onBrushStateChange={drawingControl.setBrushState}
+                            onBrushSizeChange={drawingControl.setBrushSize}
+                            onClear={drawingControl.clearCanvas}
+                        />
+                    </div>
+
+                    <div className="CanvasContainer">
+                        <div className="canvas-stage">
+                            <div className="canvas-overlay canvas-overlay-top" aria-hidden="true">
+                                <div className="hud-chip hud-target">
+                                    <span>Target</span>
+                                    <strong>{activeTargetCategory || '...'}</strong>
+                                </div>
+                                <div className="hud-chip hud-timer">{timerLabel}</div>
+                            </div>
+
+                            {scoreLabel && (
+                                <div className="canvas-overlay canvas-overlay-middle" aria-hidden="true">
+                                    <div className="hud-chip hud-round">{roundLabel}</div>
+                                    <div className="hud-chip hud-score">{scoreLabel}</div>
+                                    {roundProgressLabel && <div className="hud-chip hud-progress">{roundProgressLabel}</div>}
+                                </div>
+                            )}
+
+                            <div className="canvas-overlay canvas-overlay-bottom" aria-hidden="true">
+                                <div className={`hud-chip hud-prediction ${isCurrentPredictionCorrect ? 'good' : ''}`}>
+                                    Prediction: {predictionLabel} ({predictionConfidence}%)
+                                </div>
+                            </div>
+
+                        {/* Main Canvas */}
+                            <canvas className="mainCanvas"
+                                ref={canvasRef}
+                                width={dimensions.width}
+                                height={dimensions.height}
+                                style={{
+                                    width: `${dimensions.width}px`,
+                                    height: `${dimensions.height}px`,
+                                    border: '1px solid black',
+                                    backgroundColor: 'white'
+                                }}
+                                onClick={drawingControl.onClickCanvas}
+                                onMouseDown={drawingControl.onMouseDownCanvas}
+                                onMouseMove={drawingControl.handleMouseMoveCanvas}
+                                onMouseUp={drawingControl.handleMouseUpCanvas}
+                            />
+                        </div>
+
+                        {/* Opponent Canvas (Multiplayer) */}
+                        {multiplayer && (
+                            <canvas className="opponentCanvas"
+                                ref={canvasRefOpponent}
+                                width={dimensions.width/2}
+                                height={dimensions.height/2}
+                                style={{
+                                    width: `${dimensions.width/2}px`,
+                                    height: `${dimensions.height/2}px`,
+                                    border: '1px solid black',
+                                    backgroundColor: 'white',
+                                    pointerEvents: 'none'
+                                }}
+                            />
+                        )}
+                    </div>
                 </div>
-            )}
+            </section>
 
-            {multiplayer && gameState?.status !== 'IN_PROGRESS' && (
-                <div className="button-group">
-                    {isHost && (
-                        <button
-                            className="btn-unready"
-                            onClick={handleStopGame}
-                            disabled={!gameId}
-                        >
-                            Stop Game
-                        </button>
-                    )}
-
-                    {isHost && gameState?.status === 'FINISHED' && (
-                        <button
-                            className="btn-start-game"
-                            onClick={handleRestartGame}
-                            disabled={!gameId}
-                        >
-                            Relancer
-                        </button>
-                    )}
-
-                    <button
-                        className="btn-unready"
-                        onClick={handleQuitCurrentMatch}
-                        disabled={!gameId}
-                    >
-                        Quit Match
-                    </button>
-                </div>
-            )}
-
-            {multiplayer && gameState && (
-                <div className="multiplayer-status-panel">
-                    <p>Manche {gameState.currentRound}/{gameState.totalRounds}</p>
-                    <p>{gameState.player1Name}: {gameState.player1RoundsWon} | {gameState.player2Name || 'Player 2'}: {gameState.player2RoundsWon}</p>
-                    {gameState.status === 'STARTED' && gameState.roundActive && (
-                        <p>Progres manche: {(gameState.player1BestConfidence * 100).toFixed(1)}% | {(gameState.player2BestConfidence * 100).toFixed(1)}%</p>
-                    )}
-                </div>
-            )}
-
-            {/* Category Display */}
-            <div className="category-display">
-                {!multiplayer && gameLogic.hasStartedGame && gameLogic.targetCategory ? (
-                    <h2>
-                        {'->'} <strong>{gameLogic.targetCategory}</strong> {'<-'}
-                    </h2>
-                ) : multiplayer && !gameReady ? (
-                    <p>En attente du depart...</p>
-                ) : multiplayer && gameState?.status === 'STARTED' && gameState?.targetCategory ? (
-                    <h2>
-                        {'->'} <strong>{gameState.targetCategory}</strong> {'<-'}
-                    </h2>
-                ) : multiplayer && gameState?.status === 'FINISHED' ? (
-                    <p>Partie terminee.</p>
-                ) : (
-                    <p>Commence une partie.</p>
+            <section className="game-bottom-notices" aria-live="polite">
+                {multiplayer && gameState?.status === 'FINISHED' && (
+                    <div className="finish-banner" role="status">
+                        {gameState.matchWinnerName
+                            ? `Winner: ${gameState.matchWinnerName}`
+                            : 'Draw'}
+                    </div>
                 )}
-            </div>
 
-
-            {/* Drawing Tools */}
-            <div className="GameTools">
-                <GameTools
-                    brushState={drawingControl.brushState}
-                    brushSize={drawingControl.brushSize}
-                    onBrushStateChange={drawingControl.setBrushState}
-                    onBrushSizeChange={drawingControl.setBrushSize}
-                    onClear={drawingControl.clearCanvas}
-                />
-                {/* Timer */}
-                <div className="timer-display">
-                    {multiplayer
-                        ? `00:${multiplayerTimeLeft < 10 ? `0${multiplayerTimeLeft}` : multiplayerTimeLeft}`
-                        : gameLogic.hasStartedGame
-                        ? `00:${
-                              gameLogic.timeLeft < 10
-                                  ? `0${gameLogic.timeLeft}`
-                                  : gameLogic.timeLeft
-                          }`
-                        : '--:--'}
-                </div>
-            </div>
-
-            < div className = "CanvasContainer">
-                {/* Main Canvas */}
-                <canvas className="mainCanvas"
-                    ref={canvasRef}
-                    width={dimensions.width}
-                    height={dimensions.height}
-                    style={{
-                        width: `${dimensions.width}px`,
-                        height: `${dimensions.height}px`,
-                        border: '1px solid black',
-                        backgroundColor: 'white'
-                    }}
-                    onClick={drawingControl.onClickCanvas}
-                    onMouseDown={drawingControl.onMouseDownCanvas}
-                    onMouseMove={drawingControl.handleMouseMoveCanvas}
-                    onMouseUp={drawingControl.handleMouseUpCanvas}
-                />
-
-                {/* Opponent Canvas (Multiplayer) */}
-                {multiplayer && (
-                    <canvas className = "opponentCanvas"
-                        ref={canvasRefOpponent}
-                        width={dimensions.width/2}
-                        height={dimensions.height/2}
-                        style={{
-                            width: `${dimensions.width/2}px`,
-                            height: `${dimensions.height/2}px`,
-                            border: '1px solid black',
-                            backgroundColor: 'white',
-                            pointerEvents: 'none'
-                        }}
-                    />
+                {errorMessage && (
+                    <div className="error-message">
+                        <p>{errorMessage}</p>
+                    </div>
                 )}
-            </div>
 
-            {/* Prediction Display */}
-            <PredictionDisplay predictionData={multiplayer ? multiplayerPredictionData : gameLogic.predictionData} />
+                {infoMessage && (
+                    <div className="info-message">
+                        <p>{infoMessage}</p>
+                    </div>
+                )}
+            </section>
         </div>
     );
 }
