@@ -12,14 +12,14 @@ export default function Navbar() {
     return (
         <nav className="topNavbar">
             <div className="navBrand">
-                <NavLink to="/home" onClick={closeMenu}>Drawing Race</NavLink>
+                <NavLink to="/home" onClick={closeMenu}>Drawing race</NavLink>
             </div>
 
             <button
                 type="button"
                 className="menuToggle"
                 onClick={() => setIsOpen((prev) => !prev)}
-                aria-label="Toggle navigation menu"
+                aria-label="Open or close navigation menu"
                 aria-expanded={isOpen}
             >
                 <span />
@@ -28,10 +28,10 @@ export default function Navbar() {
             </button>
 
             <div className={`navLinks ${isOpen ? 'open' : ''}`}>
-                <NavLink to="/home" onClick={closeMenu}>Accueil</NavLink>
+                <NavLink to="/home" onClick={closeMenu}>Home</NavLink>
                 <NavLink to="/solo/game" onClick={closeMenu}>Solo</NavLink>
-                <NavLink to="/play" onClick={closeMenu}>Multijoueur</NavLink>
-                <NavLink to="/doc" onClick={closeMenu}>Doc</NavLink>
+                <NavLink to="/play" onClick={closeMenu}>Multiplayer</NavLink>
+                <NavLink to="/doc" onClick={closeMenu}>Docs</NavLink>
 
                 {isUser && (
                     <NavLink to="/stats" onClick={closeMenu}>Stats</NavLink>
@@ -39,8 +39,8 @@ export default function Navbar() {
 
                 {!isUser && (
                     <>
-                        <NavLink to="/login" onClick={closeMenu}>Connexion</NavLink>
-                        <NavLink to="/register" onClick={closeMenu}>Inscription</NavLink>
+                        <NavLink to="/login" onClick={closeMenu}>Login</NavLink>
+                        <NavLink to="/register" onClick={closeMenu}>Register</NavLink>
                     </>
                 )}
 
@@ -53,7 +53,7 @@ export default function Navbar() {
                             closeMenu();
                         }}
                     >
-                        Deconnexion
+                        Log out
                     </button>
                 )}
             </div>

@@ -3,10 +3,10 @@
  * Displays AI prediction results
  */
 
-export default function PredictionDisplay({ predictionData }) {
+export default function PredictionDisplay({ predictionData, className = '' }) {
     if (!predictionData) {
         return (
-            <div className="prediction-display empty">
+            <div className={`prediction-display empty ${className}`.trim()}>
                 <p>Draw something to get predictions!</p>
             </div>
         );
@@ -16,7 +16,7 @@ export default function PredictionDisplay({ predictionData }) {
     const confidencePercent = (prediction.confidence * 100).toFixed(2);
 
     return (
-        <div className="prediction-display">
+        <div className={`prediction-display ${className}`.trim()}>
             <div className="top-prediction">
                 <h2>Top Prediction: {prediction.category}</h2>
                 <div className="confidence-bar">

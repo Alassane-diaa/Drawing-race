@@ -1,39 +1,24 @@
 .wrapper {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    padding: 20px;
-
+    width: min(560px, 100% - 1.4rem);
+    margin: 1.1rem auto 2rem;
+    display: grid;
+    gap: 0.65rem;
 }
 
 .card {
-    padding: 2.5rem;
-    border-radius: 12px;
-    width: 100%;
-    max-width: 400px;
-    border: 1px solid var(--borderCardColor);
-    font-size: 1.5rem;
-    background-color: var(--main-bg);
-}
-.card:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-
-button {
-    font-size: 1.1rem;
-    margin: 1em;
-}
-
-input{
-    margin: 0.5em;
+    border: 1px solid var(--line);
+    background: var(--bg-elev);
+    padding: 0.85rem;
 }
 
 .footer {
     text-align: center;
-    margin-top: 1.5rem;
-    margin-bottom: 1rem;
-    color: #4b5563;
-    font-size: 1.2rem;
+    color: var(--muted);
+    font-size: 0.92rem;
+}
+
+.footer a {
+    color: var(--ink);
+    border-bottom: 1px solid var(--line);
 }
 

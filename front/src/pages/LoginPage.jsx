@@ -28,7 +28,7 @@ export default function LoginPage() {
             navigate(getSafeReturnPath(), { replace: true });
         } catch (err) {
             console.error(err);
-            setMessage("Login failed.");
+            setMessage('Login failed.');
         }
     };
 
@@ -39,10 +39,10 @@ export default function LoginPage() {
     return (
         <div className="wrapper">
             <div className="card">
-                <AuthForm title="Login" buttonText="Sign In" auth_fn={loginUserFn} />
+                <AuthForm title="Sign in" buttonText="Log in" auth_fn={loginUserFn} />
             </div>
             <div className="footer">
-                No account? Create an account here: <Link to="/register" state={{ from: location.state?.from || { pathname: '/home' } }}>Register</Link>
+                No account yet? <Link to="/register" state={{ from: location.state?.from || { pathname: '/home' } }}>Create one here</Link>
             </div>
         </div>
     );
