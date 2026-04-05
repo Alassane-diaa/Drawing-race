@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import './GamePage.css';
 import { getMyStats, addWin, addGame } from '../services/UserService';
 import {useAuth} from '../hooks/useAuth';
+import { getMergedBadges, checkAndUnlockBadges } from '../services/BadgeService';
 
 
 
@@ -318,24 +319,39 @@ export default function GamePage() {
         }
     }
 
-
-    // Remplace handleTimeUp et handleVictory par :
     function handleTimeUp(category) {
         setInfoMessage(`Time's up. Expected category: ${category}`);
         gameLogic.resetGame();
-        // Mise à jour stats : partie perdue
         if (isUser) {
-            getMyStats().then(stats => addGame(stats)).catch(() => {});
+            getMyStats()
+                .then(async stats => {
+                    const updated = await addGame(stats);
+                    const merged  = await getMergedBadges();
+                    const newBadges = await checkAndUnlockBadges(updated, merged);
+                    if (newBadges.length > 0) {
+                        setInfoMessage(prev => prev + ` 🏅 Badge débloqué : ${newBadges.map(b => b.name).join(', ')}`);
+                    }
+                })
+                .catch(() => {});
         }
     }
 
     function handleVictory(category, confidence) {
         setIsHitPulseActive(true);
+        const currentTimeLeft = gameLogic.timeLeft;
         setInfoMessage(`Great. AI recognized: ${category} (${(confidence * 100).toFixed(2)}%)`);
         gameLogic.resetGame();
-        // Mise à jour stats : victoire
         if (isUser) {
-            getMyStats().then(stats => addWin(stats, parseFloat((confidence * 100).toFixed(1)))).catch(() => {});
+            getMyStats()
+                .then(async stats => {
+                    const updated = await addWin(stats, parseFloat((confidence * 100).toFixed(1)));
+                    const merged  = await getMergedBadges();
+                    const newBadges = checkAndUnlockBadges(updated, merged, currentTimeLeft);
+                    if (newBadges.length > 0) {
+                        setInfoMessage(prev => prev + ` 🏅 Badge débloqué : ${newBadges.map(b => b.name).join(', ')}`);
+                    }
+                })
+                .catch(() => {});
         }
     }
 

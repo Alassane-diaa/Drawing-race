@@ -103,7 +103,7 @@ export async function getMergedBadges() {
 //
 // Retourne : liste des BadgeDTO fraîchement débloqués (peut être vide)
 // ─────────────────────────────────────────────
-export async function checkAndUnlockBadges(stats, mergedBadges) {
+export async function checkAndUnlockBadges(stats, mergedBadges, timeLeft = 0) {
     const conditions = [
         { id: 1,  met: stats.wins >= 1 },
         { id: 2,  met: stats.gamesPlayed >= 10 },
@@ -115,6 +115,8 @@ export async function checkAndUnlockBadges(stats, mergedBadges) {
         { id: 12, met: stats.wins >= 10 },
         { id: 13, met: stats.wins >= 50 },
         { id: 14, met: stats.wins >= 100 },
+        { id: 20, met: timeLeft > 10 },  
+        { id: 21, met: timeLeft > 13 }, 
     ];
 
     const unlockedSet = new Set(mergedBadges.filter(b => b.unlocked).map(b => b.id));
