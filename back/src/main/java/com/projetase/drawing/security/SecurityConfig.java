@@ -25,52 +25,57 @@ public class SecurityConfig {
     @Bean
     @Order(1)
     SecurityFilterChain swaggerSecurityFilterChain(HttpSecurity http) throws Exception {
-
         http
                 .securityMatcher("/v3/api-docs", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/docs", "/docs/**")
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
-
         return http.build();
     }
 
     @Bean
     @Order(2)
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // ← CORS avant tout
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/v3/api-docs", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/docs", "/docs/**").permitAll()
-                        .requestMatchers("/auth/login", "/auth/register", "/process", "/ws/**", "/game/**").permitAll()
-                        .requestMatchers("/auth/login", "/auth/register", "/process", "/random-category").permitAll()
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // préflight libre sur toutes les routes
-                        .requestMatchers(HttpMethod.GET, "/user/leaderboard").permitAll() // classement public
-                        .requestMatchers(HttpMethod.GET, "/badge").permitAll()            // liste des badges publique
+                        // Preflight OPTIONS en premier
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // Auth
+                        .requestMatchers("/auth/login", "/auth/register").permitAll()
+                        // Jeu
+                        .requestMatchers("/process", "/ws/**", "/game/**", "/random-category").permitAll()
+                        // Swagger
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/docs/**").permitAll()
+                        // Routes GET publiques
+                        .requestMatchers(HttpMethod.GET, "/user/leaderboard").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/user/avatar/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/badge").permitAll()
+                        // Rôles — AVANT anyRequest
                         .requestMatchers("/testAdmin").hasAuthority("ADMIN")
                         .requestMatchers("/testUser").hasAuthority("USER")
+                        // anyRequest TOUJOURS EN DERNIER
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt
                         .jwtAuthenticationConverter(jwtAuthenticationConverter())));
-
         return http.build();
     }
 
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-
-        config.setAllowedOrigins(List.of("http://localhost:5173")); // URL du front Vite
+        config.setAllowedOrigins(List.of("http://localhost:5173"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-        config.setAllowCredentials(true); // nécessaire pour que le token JWT passe
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
+        config.setExposedHeaders(List.of("Authorization"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config); // appliqué à toutes les routes
+        source.registerCorsConfiguration("/**", config);
         return source;
     }
 
