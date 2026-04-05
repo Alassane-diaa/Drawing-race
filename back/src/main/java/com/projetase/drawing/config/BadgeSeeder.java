@@ -53,24 +53,7 @@ public class BadgeSeeder implements ApplicationRunner {
             new String[]{"Retour aux sources",    "Reviens après une absence de 30 jours."},
             new String[]{"Sociabl",               "Joue avec 5 joueurs différents."},
             new String[]{"Communautaire",         "Joue avec 20 joueurs différents."},
-            new String[]{"Badge #33",             "Condition à définir."},
-            new String[]{"Badge #34",             "Condition à définir."},
-            new String[]{"Badge #35",             "Condition à définir."},
-            new String[]{"Badge #36",             "Condition à définir."},
-            new String[]{"Badge #37",             "Condition à définir."},
-            new String[]{"Badge #38",             "Condition à définir."},
-            new String[]{"Badge #39",             "Condition à définir."},
-            new String[]{"Badge #40",             "Condition à définir."},
-            new String[]{"Badge #41",             "Condition à définir."},
-            new String[]{"Badge #42",             "Condition à définir."},
-            new String[]{"Badge #43",             "Condition à définir."},
-            new String[]{"Badge #44",             "Condition à définir."},
-            new String[]{"Badge #45",             "Condition à définir."},
-            new String[]{"Badge #46",             "Condition à définir."},
-            new String[]{"Badge #47",             "Condition à définir."},
-            new String[]{"Badge #48",             "Condition à définir."},
-            new String[]{"Badge #49",             "Condition à définir."},
-            new String[]{"Badge #50",             "Condition à définir."}
+            new String[]{"Badge Suprême",         "Condion secrète."}
     );
 
     @Override
