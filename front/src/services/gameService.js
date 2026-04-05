@@ -5,6 +5,8 @@
 
 const API_BASE_URL = 'http://localhost:8080';
 
+import './UserService.js';
+
 const parseErrorResponse = async (response, fallbackMessage) => {
     try {
         const data = await response.json();
