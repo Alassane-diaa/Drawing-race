@@ -1,6 +1,10 @@
 ﻿import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import './GamePage.css';
+import { getMyStats, addWin, addGame } from '../services/UserService';
+import {useAuth} from '../hooks/useAuth';
+
+
 
 // Services
 import {
@@ -43,6 +47,7 @@ export default function GamePage() {
     const canvasRefOpponent = useRef(null);
     const opponentStrokesRef = useRef([]);
     const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+    const { isUser } = useAuth();
 
     useEffect(() => {
         function redimensionner() {
@@ -104,6 +109,9 @@ export default function GamePage() {
     const lastHitKeyRef = useRef('');
     const isHost = multiplayer && playerName && gameState?.player1Name === playerName;
     const isPlayer2 = multiplayer && playerName && gameState?.player2Name === playerName;
+
+
+    
 
     // Save multiplayer session
     useEffect(() => {
@@ -310,15 +318,25 @@ export default function GamePage() {
         }
     }
 
+
+    // Remplace handleTimeUp et handleVictory par :
     function handleTimeUp(category) {
         setInfoMessage(`Time's up. Expected category: ${category}`);
         gameLogic.resetGame();
+        // Mise à jour stats : partie perdue
+        if (isUser) {
+            getMyStats().then(stats => addGame(stats)).catch(() => {});
+        }
     }
 
     function handleVictory(category, confidence) {
         setIsHitPulseActive(true);
         setInfoMessage(`Great. AI recognized: ${category} (${(confidence * 100).toFixed(2)}%)`);
         gameLogic.resetGame();
+        // Mise à jour stats : victoire
+        if (isUser) {
+            getMyStats().then(stats => addWin(stats, parseFloat((confidence * 100).toFixed(1)))).catch(() => {});
+        }
     }
 
     useEffect(() => {

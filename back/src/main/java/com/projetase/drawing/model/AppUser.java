@@ -9,6 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.jdbc.Expectation;
 
 
 @Entity
@@ -24,5 +25,13 @@ public class AppUser {
     private String username;
     private String password;
     private String role;
+
+    //Les stats et la pp + un rang comme sur LOL (jsp si c'est bien)
+    private int gamesPlayed;
+    private int wins;
+    private float accuracy;
+    private String rank;
+    private String avatarFilename; //on ne stocke pas l'image mais juste le chemin vers le fichier
+
 }
 

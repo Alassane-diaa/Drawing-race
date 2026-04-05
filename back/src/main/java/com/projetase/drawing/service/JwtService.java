@@ -46,6 +46,11 @@ public class JwtService {
         user.setUsername(request.getUsername());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole("USER"); // Rôle par défaut
+        user.setRank("Noob");
+        user.setAccuracy(0.0F);
+        user.setWins(0);
+        user.setGamesPlayed(0);
+        user.setAvatarFilename("");
 
         userRepo.save(user);
 

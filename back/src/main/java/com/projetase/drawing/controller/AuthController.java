@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.Optional;
 
 @CrossOrigin
 @RestController
@@ -34,15 +35,28 @@ public class AuthController {
     @PostMapping("/login")
     @Operation(summary = "Authenticate user", description = "Returns a JWT token when username/password are valid")
     public ResponseEntity<Map<String, String>> login(@RequestBody LoginRequest request) {
-        AppUser user = userRepository.findByUsername(request.getUsername());
-        if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+        Optional<AppUser> optUser = userRepository.findByUsername(request.getUsername());
+
+        if (optUser.isEmpty()) {
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "Identifiants invalides"));
         }
+
+        AppUser user = optUser.get();
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Identifiants invalides"));
+        }
+
         String token = jwtService.generateToken(user.getUsername(), user.getRole());
-        Map<String, String> success = Map.of("token", token);
-        return ResponseEntity.ok(success);
+        return ResponseEntity.ok(Map.of(
+                "token", token,
+                "username", user.getUsername(),
+                "role", user.getRole()
+        ));
     }
 
     @PostMapping("/register")
