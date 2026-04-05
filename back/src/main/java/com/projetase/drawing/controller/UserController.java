@@ -82,4 +82,16 @@ public class UserController {
         userService.deleteAvatar(extractUsername(principal));
         return ResponseEntity.ok(Map.of("message", "Avatar supprimé"));
     }
+
+        @PutMapping("/stats")
+    public ResponseEntity<AppUser> updateStats(
+            @RequestBody Map<String, Object> body,
+            Principal principal
+    ) {
+        String username = extractUsername(principal);
+        int gamesPlayed = (int) body.get("gamesPlayed");
+        int wins        = (int) body.get("wins");
+        float accuracy  = ((Number) body.get("accuracy")).floatValue();
+        return ResponseEntity.ok(userService.updateStats(username, gamesPlayed, wins, accuracy));
+    }
 }

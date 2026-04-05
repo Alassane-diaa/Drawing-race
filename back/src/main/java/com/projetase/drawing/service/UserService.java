@@ -59,6 +59,7 @@ public class UserService {
     // ── Upload avatar ─────────────────────────────────────────────────────────
     // Le fichier est écrit dans avatarUploadDir (variable d'env en Docker,
     // dossier local en dev). Seul le nom du fichier est stocké en BDD.
+    //___________________________________________________________________________
     public String uploadAvatar(String username, MultipartFile file) throws IOException {
         String filename = username + "_" + file.getOriginalFilename();
         Path path = Paths.get(avatarUploadDir).resolve(filename);
